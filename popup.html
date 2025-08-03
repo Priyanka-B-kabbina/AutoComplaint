@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoComplaint - Review Order</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Review Order Details</h2>
+    <div id="actionSection"></div>
+    <form id="orderForm">
+      <label><i class="fa-solid fa-hashtag"></i> Order ID <input type="text" id="orderId" name="orderId" required></label>
+      <label><i class="fa-solid fa-box"></i> Product Name <input type="text" id="productName" name="productName" required></label>
+      <label><i class="fa-solid fa-industry"></i> Brand <input type="text" id="brand" name="brand"></label>
+      <label><i class="fa-solid fa-tags"></i> Product Category <input type="text" id="productCategory" name="productCategory"></label>
+      <label><i class="fa-solid fa-indian-rupee-sign"></i> Price <input type="text" id="price" name="price"></label>
+      <label><i class="fa-solid fa-calendar-day"></i> Order Date <input type="text" id="orderDate" name="orderDate"></label>
+      <label><i class="fa-solid fa-calendar-check"></i> Delivery Date <input type="text" id="deliveryDate" name="deliveryDate"></label>
+      <label><i class="fa-solid fa-store"></i> Seller Name <input type="text" id="sellerName" name="sellerName"></label>
+      <label><i class="fa-solid fa-image"></i> Product Image URL <input type="text" id="productImage" name="productImage"></label>
+      <label><i class="fa-solid fa-truck"></i> Tracking Number <input type="text" id="trackingNumber" name="trackingNumber"></label>
+      <label><i class="fa-solid fa-link"></i> Order Details Page URL <input type="text" id="orderDetailsPageUrl" name="orderDetailsPageUrl" readonly></label>
+      <div class="image-upload-section">
+        <label><i class="fa-solid fa-upload"></i> Upload Images (max 3, 5MB each)</label>
+        <input type="file" id="imageUpload" accept="image/*" multiple style="display:none;">
+        <div id="imageDrop" class="image-drop">Drag & drop or click to upload</div>
+        <div id="imagePreview" class="image-preview"></div>
+      </div>
+    </form>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
