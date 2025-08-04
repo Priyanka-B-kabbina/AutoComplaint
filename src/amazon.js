@@ -1,7 +1,3 @@
-` tags. The edited snippet appears to be a complete replacement for the original file, focusing on simplifying the extraction process and removing the AI model dependencies to address bundle size issues. The approach will now use regex and DOM extraction methods instead.
-
-```
-<replit_final_file>
 console.log('AutoComplaint: Enhanced order extraction loaded');
 
 // Detect if this is likely an order details/invoice page
@@ -230,11 +226,22 @@ async function extractOrderDetails() {
   finalData.productCategory = classifyProductCategory(finalData.productName);
 
   console.log('Extraction completed:', finalData);
+  console.log('Saving to storage with key: autoComplaintOrderUniversal');
 
   // Save to storage
   try {
-    chrome.storage.local.set({ autoComplaintOrderUniversal: finalData });
-    console.log('Data saved to storage');
+    chrome.storage.local.set({ autoComplaintOrderUniversal: finalData }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Storage error:', chrome.runtime.lastError);
+      } else {
+        console.log('Data successfully saved to storage');
+
+        // Verify save by reading back
+        chrome.storage.local.get(['autoComplaintOrderUniversal'], (result) => {
+          console.log('Verification - data in storage:', result);
+        });
+      }
+    });
   } catch (error) {
     console.error('Failed to save to storage:', error);
   }
