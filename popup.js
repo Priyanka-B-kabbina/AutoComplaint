@@ -103,21 +103,7 @@ form.addEventListener('submit', (e) => {
   });
 }); 
 
-// Enhanced seller name extraction
-if (!sellerName) {
-  // Look for a line before "Leave seller feedback"
-  for (let i = 1; i < lines.length; i++) {
-    if (/leave seller feedback/i.test(lines[i])) {
-      // The previous line may be the seller name
-      const possibleSeller = lines[i - 1].trim();
-      // Exclude product name or empty lines
-      if (possibleSeller && possibleSeller !== productName && !/earbud|phone|laptop|bluetooth|truly wireless|buds|headphone|watch/i.test(possibleSeller)) {
-        sellerName = possibleSeller;
-        break;
-      }
-    }
-  }
-}
+
 
 // Utility: Detect site type
 function getSiteType(url) {
@@ -173,14 +159,4 @@ function showActionButton() {
 
 document.addEventListener('DOMContentLoaded', showActionButton);
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.action === 'fill_grievance_form') {
-    console.log('Received fill_grievance_form message');
-    autofillGrievancePortal();
-  }
-});
-
-async function autofillGrievancePortal() {
-  console.log('Autofill triggered');
-  // ...rest of your code...
-} 
+ 
