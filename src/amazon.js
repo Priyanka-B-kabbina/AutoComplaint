@@ -1,30 +1,8 @@
+` tags. The edited snippet appears to be a complete replacement for the original file, focusing on simplifying the extraction process and removing the AI model dependencies to address bundle size issues. The approach will now use regex and DOM extraction methods instead.
 
-import Tesseract from 'tesseract.js';
-import html2canvas from 'html2canvas';
-import { pipeline } from '@xenova/transformers';
-
-console.log('AutoComplaint universal content script loaded');
-
-// Initialize NER and information extraction models
-let nerModel = null;
-let qaModel = null;
-
-async function initializeModels() {
-  try {
-    // Advanced NER model specifically trained for e-commerce and order data
-    nerModel = await pipeline('token-classification', 'Xenova/bert-base-NER');
-    
-    // Question-answering model for extracting specific information
-    qaModel = await pipeline('question-answering', 'Xenova/distilbert-base-cased-distilled-squad');
-    
-    console.log('AI models initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize AI models:', error);
-  }
-}
-
-// Initialize models when script loads
-initializeModels();
+```
+<replit_final_file>
+console.log('AutoComplaint: Enhanced order extraction loaded');
 
 // Detect if this is likely an order details/invoice page
 function isOrderDetailsPage() {
@@ -35,182 +13,166 @@ function isOrderDetailsPage() {
   const keywords = [
     'order details', 'order summary', 'order information', 'order number',
     'invoice', 'purchase details', 'order id', 'order date', 'order total',
-    'your order', 'order confirmation', 'order placed', 'order status',
-    'order history', 'order receipt', 'order', 'purchase', 'receipt'
+    'your order', 'order confirmation', 'order placed', 'order status'
   ];
 
   return keywords.some(kw => url.includes(kw) || title.includes(kw) || bodyText.includes(kw));
 }
 
-// Advanced entity extraction using transformer models
-async function extractEntitiesWithNER(text) {
-  if (!nerModel) {
-    console.warn('NER model not initialized, falling back to basic extraction');
-    return {};
-  }
+// Get all visible text content from page
+function getAllVisibleText() {
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
 
-  try {
-    const entities = await nerModel(text);
-    
-    const extractedData = {
-      orderId: '',
-      productName: '',
-      brand: '',
-      price: '',
-      orderDate: '',
-      deliveryDate: '',
-      sellerName: '',
-      trackingNumber: ''
-    };
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+          return NodeFilter.FILTER_REJECT;
+        }
 
-    // Process NER results to extract relevant entities
-    entities.forEach(entity => {
-      const value = entity.word.replace('##', '');
-      
-      switch (entity.label) {
-        case 'B-MISC':
-        case 'I-MISC':
-          if (/\d{10,}/.test(value)) {
-            extractedData.orderId = extractedData.orderId || value;
-          }
-          break;
-        case 'B-ORG':
-        case 'I-ORG':
-          extractedData.brand = extractedData.brand || value;
-          extractedData.sellerName = extractedData.sellerName || value;
-          break;
-        case 'B-PER':
-        case 'I-PER':
-          if (!extractedData.brand) extractedData.brand = value;
-          break;
+        return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
       }
-    });
-
-    return extractedData;
-  } catch (error) {
-    console.error('NER extraction failed:', error);
-    return {};
-  }
-}
-
-// Question-answering based extraction for specific fields
-async function extractWithQuestionAnswering(text) {
-  if (!qaModel) {
-    console.warn('QA model not initialized, skipping QA extraction');
-    return {};
-  }
-
-  const questions = [
-    { field: 'orderId', question: 'What is the order number or order ID?' },
-    { field: 'productName', question: 'What is the product name or item description?' },
-    { field: 'brand', question: 'What is the brand name or manufacturer?' },
-    { field: 'price', question: 'What is the total price or amount paid?' },
-    { field: 'orderDate', question: 'When was the order placed or order date?' },
-    { field: 'deliveryDate', question: 'When was the item delivered or delivery date?' },
-    { field: 'sellerName', question: 'Who is the seller or vendor name?' },
-    { field: 'trackingNumber', question: 'What is the tracking number or AWB number?' }
-  ];
-
-  const extractedData = {};
-
-  for (const { field, question } of questions) {
-    try {
-      const answer = await qaModel(question, text);
-      if (answer.score > 0.3) { // Only accept confident answers
-        extractedData[field] = answer.answer.trim();
-      }
-    } catch (error) {
-      console.error(`QA extraction failed for ${field}:`, error);
     }
+  );
+
+  let textContent = '';
+  let node;
+  while (node = walker.nextNode()) {
+    textContent += node.textContent + ' ';
   }
 
-  return extractedData;
+  return textContent;
 }
 
-// Enhanced OCR with better preprocessing
-async function extractWithAdvancedOCR() {
-  try {
-    // Target order details section more intelligently
-    const orderSection = document.querySelector(
-      '#orderDetails, .order-summary, .a-box-group, .order-info, ' +
-      '[class*="order"], [id*="order"], [class*="invoice"], [id*="invoice"]'
-    ) || document.body;
-
-    const canvas = await html2canvas(orderSection, {
-      scale: 2, // Higher resolution
-      useCORS: true,
-      allowTaint: true
-    });
-
-    const { data: { text } } = await Tesseract.recognize(canvas.toDataURL(), 'eng', {
-      logger: m => console.log(m)
-    });
-
-    console.log('OCR extracted text:', text);
-    return text;
-  } catch (error) {
-    console.error('OCR extraction failed:', error);
-    return '';
-  }
-}
-
-// Smart DOM extraction with better selectors
-function extractFromDOM() {
-  const selectors = {
+// Enhanced regex-based extraction patterns
+function extractWithPatterns(text) {
+  const patterns = {
     orderId: [
-      '[data-testid*="order"], [class*="order-id"], [id*="order-id"]',
-      'span:contains("Order"), div:contains("Order #"), td:contains("Order")',
-      '*[class*="order-number"], *[id*="order-number"]'
+      /order\s*(?:id|number|#)\s*:?\s*([A-Z0-9\-]{10,})/gi,
+      /(?:order|invoice)\s*#?\s*([0-9\-]{10,})/gi,
+      /([0-9]{3}-[0-9]{7}-[0-9]{7})/g, // Amazon format
     ],
     productName: [
-      '[data-testid*="product"], [class*="product-title"], [class*="item-name"]',
-      'h1, h2, h3, .product-name, .item-title',
-      '*[class*="product-description"]'
+      /<title>([^|]+)/i,
+      /product\s*name\s*:?\s*([^\n]+)/gi,
+      /item\s*:?\s*([^\n]+)/gi
     ],
     price: [
-      '[class*="price"], [id*="price"], [data-testid*="price"]',
-      '.total, .amount, .cost, .payment',
-      '*[class*="total-amount"], *[class*="grand-total"]'
+      /₹\s*([0-9,]+\.?[0-9]*)/g,
+      /total\s*:?\s*₹?\s*([0-9,]+\.?[0-9]*)/gi,
+      /amount\s*:?\s*₹?\s*([0-9,]+\.?[0-9]*)/gi
     ],
     brand: [
-      '[class*="brand"], [id*="brand"], [data-testid*="brand"]',
-      '.manufacturer, .vendor, .seller-name'
+      /brand\s*:?\s*([A-Za-z\s]+)/gi,
+      /by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g
+    ],
+    orderDate: [
+      /order\s*(?:placed|date)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+      /placed\s*on\s*:?\s*(\d{1,2}\s+\w+\s+\d{4})/gi
+    ],
+    deliveryDate: [
+      /delivered\s*(?:on)?\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+      /delivery\s*date\s*:?\s*(\d{1,2}\s+\w+\s+\d{4})/gi
     ]
   };
 
-  const extractedData = {};
+  const extracted = {};
+
+  for (const [field, regexList] of Object.entries(patterns)) {
+    for (const regex of regexList) {
+      const matches = text.match(regex);
+      if (matches && matches.length > 0) {
+        let value = matches[0];
+        if (regex.source.includes('(')) {
+          const execResult = regex.exec(text);
+          if (execResult && execResult[1]) {
+            value = execResult[1].trim();
+          }
+        }
+        extracted[field] = value;
+        break;
+      }
+    }
+  }
+
+  return extracted;
+}
+
+// Smart DOM-based extraction
+function extractFromDOM() {
+  const selectors = {
+    orderId: [
+      '[data-testid*="order"]',
+      '[class*="order-id"]',
+      '[id*="order"]',
+      'span:contains("Order")',
+      'div:contains("Order #")'
+    ],
+    productName: [
+      'h1[data-automation-id="product-title"]',
+      'h1#productTitle',
+      '.product-title',
+      'h1, h2, h3'
+    ],
+    price: [
+      '.a-price-whole',
+      '[class*="price"]',
+      '.total-price',
+      '.amount'
+    ],
+    brand: [
+      '[data-automation-id="brand-name"]',
+      '.brand',
+      '.manufacturer'
+    ]
+  };
+
+  const extracted = {};
 
   Object.entries(selectors).forEach(([field, selectorList]) => {
     for (const selector of selectorList) {
       try {
-        const element = document.querySelector(selector);
+        let element;
+        if (selector.includes(':contains(')) {
+          // Handle pseudo-selector manually
+          const text = selector.match(/:contains\("([^"]+)"\)/)?.[1];
+          if (text) {
+            element = Array.from(document.querySelectorAll(selector.split(':')[0]))
+              .find(el => el.textContent.includes(text));
+          }
+        } else {
+          element = document.querySelector(selector);
+        }
+
         if (element && element.textContent.trim()) {
-          extractedData[field] = element.textContent.trim();
+          extracted[field] = element.textContent.trim();
           break;
         }
       } catch (e) {
-        // Continue to next selector
+        continue;
       }
     }
   });
 
-  return extractedData;
+  return extracted;
 }
 
-// Product category classification using modern approach
-function classifyProductCategory(productName, description = '') {
-  const text = `${productName} ${description}`.toLowerCase();
-  
+// Classify product category with simple keyword matching
+function classifyProductCategory(productName) {
+  if (!productName) return 'Others';
+
+  const text = productName.toLowerCase();
   const categories = {
-    'Electronics': ['phone', 'laptop', 'tablet', 'headphone', 'earphone', 'speaker', 'camera', 'tv', 'monitor'],
-    'Clothing': ['shirt', 't-shirt', 'jean', 'dress', 'trouser', 'pant', 'jacket', 'sweater', 'hoodie'],
-    'Footwear': ['shoe', 'sandal', 'sneaker', 'boot', 'slipper', 'heel', 'ballerina'],
-    'Accessories': ['watch', 'bag', 'wallet', 'belt', 'sunglasses', 'jewelry'],
-    'Home & Kitchen': ['appliance', 'cookware', 'furniture', 'decor', 'bedding'],
-    'Beauty': ['makeup', 'skincare', 'perfume', 'cosmetic', 'beauty'],
-    'Sports': ['fitness', 'gym', 'sports', 'exercise', 'yoga'],
-    'Books': ['book', 'novel', 'textbook', 'magazine'],
-    'Health': ['medicine', 'supplement', 'vitamin', 'health']
+    'Electronics': ['phone', 'laptop', 'tablet', 'headphone', 'speaker', 'camera', 'tv'],
+    'Clothing': ['shirt', 't-shirt', 'dress', 'jean', 'trouser', 'jacket'],
+    'Footwear': ['shoe', 'sandal', 'sneaker', 'boot'],
+    'Home & Kitchen': ['appliance', 'cookware', 'furniture'],
+    'Beauty': ['makeup', 'skincare', 'perfume', 'cosmetic'],
+    'Books': ['book', 'novel', 'textbook']
   };
 
   for (const [category, keywords] of Object.entries(categories)) {
@@ -218,59 +180,42 @@ function classifyProductCategory(productName, description = '') {
       return category;
     }
   }
-  
+
   return 'Others';
 }
 
-// Main extraction function combining all methods
-async function extractOrderDetailsAdvanced() {
+// Main extraction function
+async function extractOrderDetails() {
   if (!isOrderDetailsPage()) {
-    console.log('Not an order details/invoice page. Skipping extraction.');
+    console.log('Not an order details page. Skipping extraction.');
     return;
   }
 
-  console.log('Starting advanced order extraction...');
+  console.log('Starting order extraction...');
 
-  // Get page text for AI processing
-  const pageText = document.body.innerText;
-  
+  // Get page text
+  const pageText = getAllVisibleText();
+  const htmlContent = document.body.innerHTML;
+
   // Extract using multiple methods
-  const [ocrText, domData, nerData, qaData] = await Promise.all([
-    extractWithAdvancedOCR(),
-    Promise.resolve(extractFromDOM()),
-    extractEntitiesWithNER(pageText),
-    extractWithQuestionAnswering(pageText)
-  ]);
+  const patternData = extractWithPatterns(pageText + ' ' + document.title);
+  const domData = extractFromDOM();
 
-  // Combine OCR text with page text for better AI processing
-  const combinedText = `${pageText}\n\nOCR Data:\n${ocrText}`;
-  
-  // Get additional AI extractions from combined text
-  const [nerFromCombined, qaFromCombined] = await Promise.all([
-    extractEntitiesWithNER(combinedText),
-    extractWithQuestionAnswering(combinedText)
-  ]);
-
-  // Merge all extraction results with priority
+  // Merge results with priority to DOM data
   const finalData = {
     detectedSite: window.location.hostname,
     orderDetailsPageUrl: window.location.href,
-    orderId: qaData.orderId || qaFromCombined.orderId || nerData.orderId || nerFromCombined.orderId || domData.orderId || '',
-    productName: qaData.productName || qaFromCombined.productName || domData.productName || '',
-    brand: qaData.brand || qaFromCombined.brand || nerData.brand || nerFromCombined.brand || domData.brand || '',
-    price: qaData.price || qaFromCombined.price || domData.price || '',
-    orderDate: qaData.orderDate || qaFromCombined.orderDate || '',
-    deliveryDate: qaData.deliveryDate || qaFromCombined.deliveryDate || '',
-    sellerName: qaData.sellerName || qaFromCombined.sellerName || nerData.sellerName || nerFromCombined.sellerName || '',
-    trackingNumber: qaData.trackingNumber || qaFromCombined.trackingNumber || '',
+    orderId: domData.orderId || patternData.orderId || '',
+    productName: domData.productName || patternData.productName || document.title.split('|')[0].trim(),
+    brand: domData.brand || patternData.brand || '',
+    price: domData.price || patternData.price || '',
+    orderDate: patternData.orderDate || '',
+    deliveryDate: patternData.deliveryDate || '',
+    sellerName: patternData.sellerName || '',
+    trackingNumber: patternData.trackingNumber || '',
     productImage: '',
     productCategory: ''
   };
-
-  // Classify product category
-  if (finalData.productName) {
-    finalData.productCategory = classifyProductCategory(finalData.productName);
-  }
 
   // Get product image
   const productImages = Array.from(document.images).filter(img => 
@@ -281,13 +226,36 @@ async function extractOrderDetailsAdvanced() {
     finalData.productImage = productImages[0].src;
   }
 
-  console.log('Advanced extraction completed:', finalData);
-  
+  // Classify product
+  finalData.productCategory = classifyProductCategory(finalData.productName);
+
+  console.log('Extraction completed:', finalData);
+
   // Save to storage
-  chrome.storage.local.set({ autoComplaintOrderUniversal: finalData });
-  
+  try {
+    chrome.storage.local.set({ autoComplaintOrderUniversal: finalData });
+    console.log('Data saved to storage');
+  } catch (error) {
+    console.error('Failed to save to storage:', error);
+  }
+
   return finalData;
 }
 
-// Run the advanced extraction
-extractOrderDetailsAdvanced();
+// Run extraction when page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', extractOrderDetails);
+} else {
+  extractOrderDetails();
+}
+
+// Also run when URL changes (for SPAs)
+let currentUrl = window.location.href;
+const observer = new MutationObserver(() => {
+  if (window.location.href !== currentUrl) {
+    currentUrl = window.location.href;
+    setTimeout(extractOrderDetails, 1000); // Delay to allow page to load
+  }
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
