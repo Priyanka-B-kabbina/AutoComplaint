@@ -1,2 +1,3 @@
-// DEPRECATED: This file is no longer used. All logic is now in src/amazon.js and bundled via Webpack.
-// This file is kept only for reference and should not be edited.
+
+// This file has been removed as all functionality is now in src/amazon.js
+// The bundled version at dist/amazon.bundle.js contains the latest extraction logic
