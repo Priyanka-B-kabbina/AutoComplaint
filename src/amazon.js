@@ -180,37 +180,142 @@ function classifyProductCategory(productName) {
   return 'Others';
 }
 
-// Main extraction function
+// Enhanced multi-source fusion with confidence scoring
+function fuseDataSources(sources) {
+  const fusedData = {};
+  const confidenceScores = {};
+
+  // Define confidence weights for different extraction methods
+  const methodWeights = {
+    dom: 0.8,        // DOM extraction - highest confidence
+    pattern: 0.6,    // Pattern matching - medium confidence
+    ml: 0.9,         // ML model extraction - highest confidence (when available)
+    fallback: 0.3    // Fallback methods - lowest confidence
+  };
+
+  // Fusion logic for each field
+  const fields = ['orderId', 'productName', 'brand', 'price', 'orderDate', 'deliveryDate', 'sellerName', 'trackingNumber'];
+  
+  fields.forEach(field => {
+    let bestValue = '';
+    let bestConfidence = 0;
+    let sourceInfo = [];
+
+    // Evaluate each source
+    sources.forEach(source => {
+      if (source.data[field] && source.data[field].trim()) {
+        const confidence = calculateFieldConfidence(field, source.data[field], source.method);
+        const weightedConfidence = confidence * methodWeights[source.method];
+        
+        sourceInfo.push({
+          method: source.method,
+          value: source.data[field],
+          confidence: weightedConfidence
+        });
+
+        if (weightedConfidence > bestConfidence) {
+          bestValue = source.data[field];
+          bestConfidence = weightedConfidence;
+        }
+      }
+    });
+
+    fusedData[field] = bestValue;
+    confidenceScores[field] = {
+      value: bestValue,
+      confidence: bestConfidence,
+      sources: sourceInfo
+    };
+  });
+
+  return { fusedData, confidenceScores };
+}
+
+// Calculate confidence score for a specific field and value
+function calculateFieldConfidence(field, value, method) {
+  let confidence = 0.5; // Base confidence
+
+  // Field-specific confidence rules
+  switch (field) {
+    case 'orderId':
+      if (/^[A-Z0-9\-]{10,}$/.test(value)) confidence += 0.3;
+      if (value.length >= 15) confidence += 0.2;
+      break;
+    case 'price':
+      if (/^\d+[,.]?\d*$/.test(value.replace(/[₹$]/g, ''))) confidence += 0.4;
+      break;
+    case 'productName':
+      if (value.length > 10 && value.length < 200) confidence += 0.3;
+      if (!/^\s*$/.test(value)) confidence += 0.2;
+      break;
+    case 'brand':
+      if (/^[A-Za-z\s&]+$/.test(value) && value.length > 2) confidence += 0.3;
+      break;
+  }
+
+  // Method-specific adjustments
+  if (method === 'dom' && value.includes('›')) confidence -= 0.1; // Navigation breadcrumbs
+  if (method === 'pattern' && value.includes(':')) confidence += 0.1; // Structured data
+
+  return Math.min(confidence, 1.0);
+}
+
+// Main extraction function with multi-source fusion
 async function extractOrderDetails() {
   if (!isOrderDetailsPage()) {
     console.log('Not an order details page. Skipping extraction.');
     return;
   }
 
-  console.log('Starting order extraction...');
+  console.log('Starting enhanced multi-source extraction...');
 
   // Get page text
   const pageText = getAllVisibleText();
   const htmlContent = document.body.innerHTML;
 
-  // Extract using multiple methods
-  const patternData = extractWithPatterns(pageText + ' ' + document.title);
-  const domData = extractFromDOM();
+  // Extract using multiple methods (sources)
+  const sources = [
+    {
+      method: 'dom',
+      data: extractFromDOM()
+    },
+    {
+      method: 'pattern', 
+      data: extractWithPatterns(pageText + ' ' + document.title)
+    },
+    {
+      method: 'fallback',
+      data: {
+        productName: document.title.split('|')[0].trim(),
+        brand: extractBrandFromMeta(),
+        price: extractPriceFromMeta()
+      }
+    }
+  ];
 
-  // Merge results with priority to DOM data
+  // Apply multi-source fusion
+  const { fusedData, confidenceScores } = fuseDataSources(sources);
+
+  // Create final data structure
   const finalData = {
     detectedSite: window.location.hostname,
     orderDetailsPageUrl: window.location.href,
-    orderId: domData.orderId || patternData.orderId || '',
-    productName: domData.productName || patternData.productName || document.title.split('|')[0].trim(),
-    brand: domData.brand || patternData.brand || '',
-    price: domData.price || patternData.price || '',
-    orderDate: patternData.orderDate || '',
-    deliveryDate: patternData.deliveryDate || '',
-    sellerName: patternData.sellerName || '',
-    trackingNumber: patternData.trackingNumber || '',
+    orderId: fusedData.orderId || '',
+    productName: fusedData.productName || '',
+    brand: fusedData.brand || '',
+    price: fusedData.price || '',
+    orderDate: fusedData.orderDate || '',
+    deliveryDate: fusedData.deliveryDate || '',
+    sellerName: fusedData.sellerName || '',
+    trackingNumber: fusedData.trackingNumber || '',
     productImage: '',
-    productCategory: ''
+    productCategory: '',
+    // Add fusion metadata
+    _fusionMetadata: {
+      confidenceScores: confidenceScores,
+      extractionSources: sources.length,
+      overallConfidence: calculateOverallConfidence(confidenceScores)
+    }
   };
 
   // Get product image
@@ -225,7 +330,33 @@ async function extractOrderDetails() {
   // Classify product
   finalData.productCategory = classifyProductCategory(finalData.productName);
 
-  console.log('Extraction completed:', finalData);
+  // Helper function to extract brand from meta tags
+function extractBrandFromMeta() {
+  const metaBrand = document.querySelector('meta[property="product:brand"]') || 
+                   document.querySelector('meta[name="brand"]');
+  return metaBrand ? metaBrand.getAttribute('content') : '';
+}
+
+// Helper function to extract price from meta tags
+function extractPriceFromMeta() {
+  const metaPrice = document.querySelector('meta[property="product:price:amount"]') || 
+                   document.querySelector('meta[name="price"]');
+  return metaPrice ? metaPrice.getAttribute('content') : '';
+}
+
+// Calculate overall confidence score
+function calculateOverallConfidence(confidenceScores) {
+  const scores = Object.values(confidenceScores).map(item => item.confidence);
+  const validScores = scores.filter(score => score > 0);
+  
+  if (validScores.length === 0) return 0;
+  
+  const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  return Math.round(average * 100) / 100; // Round to 2 decimal places
+}
+
+  console.log('Multi-source extraction completed:', finalData);
+  console.log('Fusion metadata:', finalData._fusionMetadata);
   console.log('Saving to storage with key: autoComplaintOrderUniversal');
 
   // Save to storage
