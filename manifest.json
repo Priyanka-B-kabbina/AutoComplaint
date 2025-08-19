@@ -28,14 +28,19 @@
     "content_scripts": [
       {
         "matches": ["<all_urls>"],
-        "js": [
-          "dist/amazon.bundle.js"
-        ]
+        "js": ["dist/universal_extractor.bundle.js"],
+        "run_at": "document_idle"
       },
       {
-        "matches": ["https://consumerhelpline.gov.in/*"],
-        "js": ["content_scripts/consumer_portal.js"],
-        "run_at": "document_idle"
+        "matches": [
+          "https://consumerhelpline.gov.in/*",
+          "file://*/test.html*",
+          "file://*/diagnostic.html*",
+          "file://*/debug.html*"
+        ],
+        "js": ["dist/consumer_portal.bundle.js"],
+        "run_at": "document_idle",
+        "all_frames": true
       }
     ],
     "icons": {
@@ -45,4 +50,3 @@
       "128": "assets/icon128.png"
     }
   }
-  

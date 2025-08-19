@@ -7,13 +7,14 @@ AutoComplaint is a Chrome extension that streamlines the process of filing consu
 
 FEATURES
 --------
-- Order Extraction: Extracts order details (Order ID, Product Name, Brand, Price, Dates, etc.) from supported e-commerce order/invoice pages using DOM parsing, OCR, and NLP.
+- ML-Based Order Extraction: Uses machine learning models (DistilBERT MNLI zero-shot classification) to intelligently extract order details from e-commerce pages without rule-based fallbacks.
+- Order Page Classification: DistilBERT MNLI classifies page content to identify order/invoice pages with high accuracy across different e-commerce platforms.
 - Image Upload: Lets users attach up to 3 images (e.g., invoices, product photos) as evidence, with previews.
 - Smart Storage: Saves extracted order data and images in Chrome local storage for later use.
 - Auto-Fill Grievance Portal: On the consumer portal, fills in the complaint form with a single click, handling Select2 dropdowns, datepickers, and conditional fields.
 - Modern Popup UI: Context-aware popup shows "Save Order Data" on e-commerce sites and "Fill In" on the grievance portal, with a clean, modern look and toast notifications.
-- Robust Site Detection: Supports Amazon, Shopmistry, and can be extended to other e-commerce platforms.
-- No Manual Copy-Paste: Reduces friction and errors in filing complaints.
+- Extensible ML Architecture: Supports custom model training via the integrated training suite for improved extraction accuracy.
+- No Manual Copy-Paste: Reduces friction and errors in filing complaints through intelligent automation.
 
 ----------------------------
 
@@ -33,9 +34,16 @@ WORKFLOW
    - Click FILL IN. The extension auto-fills the portal form with your saved order data, including handling Select2 dropdowns, datepickers, and conditional fields.
 
 3. Under the Hood:
+   - ML-Based Architecture:
+     - Uses DistilBERT MNLI (from @xenova/transformers) for zero-shot classification of order pages.
+     - Vocabulary-based tokenization for consistent ML model input processing.
+     - No rule-based or fallback logic - purely machine learning driven extraction.
    - Content Scripts: 
-     - src/amazon.js runs on e-commerce sites, extracting order data using DOM, OCR (Tesseract.js), and image classification (MobileNet).
+     - src/amazon.js runs on e-commerce sites, using ML models for order page classification and data extraction.
      - content_scripts/consumer_portal.js runs on the grievance portal, listening for the "Fill In" message and filling the form.
+   - Training Suite:
+     - Integrated training suite for custom model development and fine-tuning.
+     - Support for custom ecommerce data training and NER-based extraction (future).
    - Popup UI: 
      - popup.html and popup.js provide a modern, context-aware interface for saving and filling data.
    - Storage: 
@@ -61,10 +69,17 @@ AutoComplaint/
   popup.html             # Popup UI markup
   popup.js               # Popup UI logic and messaging
   src/
-    amazon.js            # Main extraction logic for e-commerce sites
+    amazon.js            # Main ML-based extraction logic for e-commerce sites
+    distilbert-mnli-classifier.js  # DistilBERT MNLI zero-shot classifier
+  training-suite/        # ML model training and development
+    src/
+      classifier.js      # Custom model training logic
+    models/
+      order-classifier/  # Order classification models and exports
   utils/
     image_compress.js    # (Empty, reserved for future use)
   webpack.config.js      # Webpack build config
+  distilbert-test.html   # Test interface for DistilBERT MNLI classifier
 
 ----------------------------
 
@@ -90,12 +105,18 @@ TECHNOLOGIES USED
 -----------------
 - JavaScript (ES6+)
 - Chrome Extensions API (Manifest v3)
-- Tesseract.js (OCR for extracting text from images/screenshots)
-- TensorFlow.js + MobileNet (Image classification for product category)
-- Compromise NLP (Natural language processing for entity extraction)
-- html2canvas (Screenshotting DOM sections for OCR)
-- Webpack (Bundling scripts)
-- Select2, jQuery (Handled in the portal for autofill)
+- Machine Learning:
+  - @xenova/transformers (DistilBERT MNLI zero-shot classification)
+  - Vocabulary-based tokenization for ML model consistency
+  - Custom training suite for model development
+- Legacy Technologies (being phased out):
+  - Tesseract.js (OCR for extracting text from images/screenshots)
+  - TensorFlow.js + MobileNet (Image classification for product category)
+  - Compromise NLP (Natural language processing for entity extraction)
+- Utility Libraries:
+  - html2canvas (Screenshotting DOM sections for OCR)
+  - Webpack (Bundling scripts)
+  - Select2, jQuery (Handled in the portal for autofill)
 
 ----------------------------
 
@@ -108,25 +129,26 @@ PERMISSIONS
 
 KNOWN LIMITATIONS
 -----------------
-- Only supports Amazon, Shopmistry, and similar sites (regex-based detection).
-- Extraction accuracy depends on page structure and OCR quality.
+- ML model loading time may cause initial delay on first use (models are cached after first load).
+- Extraction accuracy depends on ML model training and page content structure.
+- Currently optimized for English language content and Indian e-commerce sites.
 - Only works on the Indian National Consumer Helpline portal.
-- Image compression is not yet implemented.
+- Requires internet connection for initial model downloads.
 
 ----------------------------
 
 10 THINGS TO IMPROVE
 --------------------
-1. Add More E-commerce Sites: Extend extraction logic and site detection for Flipkart, Myntra, Ajio, etc.
-2. Robust Image Compression: Implement image compression in utils/image_compress.js to reduce upload size.
-3. Background Script Enhancements: Use background.js for advanced features like notifications, analytics, or persistent messaging.
-4. Error Handling & User Feedback: Show clear error messages if extraction or autofill fails, and guide the user to fix issues.
-5. Field Mapping UI: Let users map extracted fields to portal fields if auto-mapping fails.
-6. Multi-Order Support: Allow saving and managing multiple orders, not just the latest one.
-7. Cloud Sync: Optionally sync saved orders/images to the cloud for backup and multi-device use.
-8. Accessibility Improvements: Ensure the popup and autofill logic are accessible (ARIA, keyboard navigation, color contrast).
-9. Internationalization (i18n): Support other languages and consumer portals.
-10. Automated Testing: Add unit and integration tests for extraction, storage, and autofill logic.
+1. NER-Based Extraction: Implement Named Entity Recognition (NER) for more precise order detail extraction (Order ID, Product Name, Price, etc.).
+2. Custom Model Training: Use the training suite to train custom models on specific ecommerce site data for improved accuracy.
+3. Multi-Language Support: Extend ML models to support regional languages and international e-commerce platforms.
+4. Advanced ML Pipeline: Implement model ensemble techniques and confidence scoring for extraction results.
+5. Robust Image Compression: Implement image compression in utils/image_compress.js to reduce upload size.
+6. Background Script Enhancements: Use background.js for model caching, pre-loading, and performance optimization.
+7. Error Handling & User Feedback: Show clear error messages if ML extraction or autofill fails, with fallback guidance.
+8. Field Mapping UI: Let users correct ML extraction results and map fields if auto-mapping fails.
+9. Multi-Order Support: Allow saving and managing multiple orders with ML-based deduplication.
+10. Performance Optimization: Implement model quantization, worker threads, and progressive loading for better performance.
 
 ----------------------------
 

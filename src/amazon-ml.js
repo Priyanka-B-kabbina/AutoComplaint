@@ -1,25 +1,9 @@
 /**
- * AutoComplaint Extension - ML-Based Order Extraction with DistilBERT MNLI
- * Uses DistilBERT MNLI model for order detection and ML models for extraction
+ * AutoComplaint Extension - ML-Based Order Extraction
+ * Uses trained ML models for order detection and information extraction
  */
 
-console.log('AutoComplaint: DistilBERT MNLI + ML Extraction v7.1');
-
-// Import DistilBERT MNLI Classifier
-// Note: In browser environment, this will be loaded via script tag
-let DistilBERTMNLIClassifier;
-if (typeof window !== 'undefined') {
-  // Browser environment - class available globally
-  DistilBERTMNLIClassifier = window.DistilBERTMNLIClassifier;
-} else {
-  // Node.js environment - import module
-  try {
-    const module = await import('./distilbert-mnli-classifier.js');
-    DistilBERTMNLIClassifier = module.default || module.DistilBERTMNLIClassifier;
-  } catch (error) {
-    console.error('Failed to import DistilBERT classifier:', error);
-  }
-}
+console.log('AutoComplaint: ML-Based Order Extraction v7.0');
 
 // Global configuration
 const CONFIG = {
@@ -32,7 +16,7 @@ const CONFIG = {
 
 // ML Models
 let models = {
-  distilbertClassifier: null, // DistilBERT MNLI for classification
+  classifier: null,
   extractor: null,
   ner: null,
   embeddings: null
@@ -48,24 +32,9 @@ async function initializeMLModels() {
   if (modelsReady) return models;
   
   try {
-    console.log('🤖 Initializing ML models with DistilBERT MNLI...');
+    console.log('🤖 Initializing ML models...');
     
-    // 1. DistilBERT MNLI Order Page Classifier (PRIMARY)
-    console.log('🧠 Loading DistilBERT MNLI classifier...');
-    try {
-      if (!DistilBERTMNLIClassifier) {
-        throw new Error('DistilBERT MNLI Classifier not available');
-      }
-      
-      models.distilbertClassifier = new DistilBERTMNLIClassifier();
-      await models.distilbertClassifier.loadModel();
-      console.log('✅ DistilBERT MNLI classifier loaded successfully');
-    } catch (error) {
-      console.error('❌ DistilBERT MNLI classifier failed to load:', error.message);
-      throw error; // Don't continue without primary classifier
-    }
-    
-    // Load additional models from training suite server
+    // Load models from training suite server
     const modelBaseUrl = `${CONFIG.MODEL_SERVER_URL}/models`;
     
     // 1. Order Page Classifier
@@ -129,34 +98,35 @@ async function initializeMLModels() {
 }
 
 /**
- * DistilBERT MNLI-based order page classification
+ * ML-based order page classification
  */
 async function isOrderPageML(pageContent) {
   try {
-    if (!models.distilbertClassifier) {
-      throw new Error('DistilBERT MNLI classifier not available');
+    if (!models.classifier) {
+      throw new Error('Classifier model not available');
     }
     
-    console.log('🧠 Using DistilBERT MNLI for classification...');
-    
-    // Use DistilBERT MNLI classifier directly
-    const result = await models.distilbertClassifier.classify(pageContent);
-    
-    console.log('🤖 DistilBERT MNLI Result:', {
-      isOrder: result.isOrder,
-      confidence: result.confidence.toFixed(3),
-      topLabel: result.topLabel
+    // Send text to classification API
+    const response = await fetch(`${CONFIG.MODEL_SERVER_URL}/classify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: pageContent })
     });
     
+    if (!response.ok) {
+      throw new Error('Classification API error');
+    }
+    
+    const result = await response.json();
+    
     return {
-      isOrder: result.isOrder,
+      isOrder: result.prediction === 'order',
       confidence: result.confidence,
-      method: 'distilbert-mnli',
-      details: result
+      method: 'ml'
     };
     
   } catch (error) {
-    console.error('❌ DistilBERT MNLI classification failed:', error.message);
+    console.warn('⚠️ ML classification failed:', error.message);
     throw error;
   }
 }

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoComplaint Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-form {
+            display: grid;
+            gap: 15px;
+        }
+        .form-group {
+            display: grid;
+            gap: 5px;
+        }
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+        input, select, textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AutoComplaint Extension Test Page</h1>
+    
+    <div class="section">
+        <h2>📋 Extension Status Check</h2>
+        <button onclick="checkExtension()">Check Extension Status</button>
+        <div id="extensionStatus" class="status info">Click the button to check if the extension is loaded and working.</div>
+    </div>
+
+    <div class="section">
+        <h2>💾 Storage Test</h2>
+        <button onclick="testStorage()">Test Storage Access</button>
+        <div id="storageStatus" class="status info">Click to test if the extension can access Chrome storage.</div>
+    </div>
+
+    <div class="section">
+        <h2>📨 Message Test</h2>
+        <button onclick="testMessage()">Test Content Script Communication</button>
+        <div id="messageStatus" class="status info">Click to test communication with content scripts.</div>
+    </div>
+
+    <div class="section">
+        <h2>📝 Mock Grievance Form</h2>
+        <p>This form simulates a consumer grievance portal. Use it to test the "Fill In" functionality:</p>
+        
+        <form class="test-form">
+            <div class="form-group">
+                <label for="grievanceType">Grievance Type:</label>
+                <select id="grievanceType" name="grievanceType">
+                    <option value="">Select Type</option>
+                    <option value="Grievance">Grievance</option>
+                    <option value="Complaint">Complaint</option>
+                    <option value="Feedback">Feedback</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="grievanceClassification">Classification:</label>
+                <select id="grievanceClassification" name="grievanceClassification">
+                    <option value="">Select Classification</option>
+                    <option value="Goods">Goods</option>
+                    <option value="Services">Services</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="sectorIndustry">Sector/Industry:</label>
+                <select id="sectorIndustry" name="sectorIndustry">
+                    <option value="">Select Sector</option>
+                    <option value="E-Commerce">E-Commerce</option>
+                    <option value="Banking">Banking</option>
+                    <option value="Telecom">Telecom</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="orderId">Order ID:</label>
+                <input type="text" id="orderId" name="orderId" placeholder="Order ID will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="productName">Product Name:</label>
+                <input type="text" id="productName" name="productName" placeholder="Product name will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="brand">Brand:</label>
+                <input type="text" id="brand" name="brand" placeholder="Brand will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="price">Price:</label>
+                <input type="text" id="price" name="price" placeholder="Price will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="orderDate">Order Date:</label>
+                <input type="date" id="orderDate" name="orderDate">
+            </div>
+
+            <div class="form-group">
+                <label for="sellerName">Seller Name:</label>
+                <input type="text" id="sellerName" name="sellerName" placeholder="Seller name will be filled here">
+            </div>
+
+            <button type="button" onclick="clearForm()">Clear Form</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li><strong>Test Extension Status:</strong> Make sure the extension is loaded and has proper permissions.</li>
+            <li><strong>Save Order Data:</strong> Go to an e-commerce site (Amazon, Flipkart) and use the "Save Order Details" button.</li>
+            <li><strong>Return to This Page:</strong> Come back here and click the "Fill In" button in the extension popup.</li>
+            <li><strong>Check Results:</strong> The mock form above should auto-fill with your saved order data.</li>
+            <li><strong>Debug Issues:</strong> Use the test buttons above to diagnose any problems.</li>
+        </ol>
+    </div>
+
+    <script>
+        function checkExtension() {
+            const status = document.getElementById('extensionStatus');
+            
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                status.className = 'status success';
+                status.textContent = '✅ Extension API is available and working!';
+            } else {
+                status.className = 'status error';
+                status.textContent = '❌ Extension API not available. Make sure the extension is installed and enabled.';
+            }
+        }
+
+        function testStorage() {
+            const status = document.getElementById('storageStatus');
+            
+            if (typeof chrome === 'undefined' || !chrome.storage) {
+                status.className = 'status error';
+                status.textContent = '❌ Chrome storage API not available.';
+                return;
+            }
+
+            // Test write
+            const testData = { test: 'AutoComplaint test data', timestamp: Date.now() };
+            chrome.storage.local.set({ autoComplaintTest: testData }, () => {
+                if (chrome.runtime.lastError) {
+                    status.className = 'status error';
+                    status.textContent = `❌ Storage write failed: ${chrome.runtime.lastError.message}`;
+                    return;
+                }
+
+                // Test read
+                chrome.storage.local.get(['autoComplaintTest'], (result) => {
+                    if (chrome.runtime.lastError) {
+                        status.className = 'status error';
+                        status.textContent = `❌ Storage read failed: ${chrome.runtime.lastError.message}`;
+                        return;
+                    }
+
+                    if (result.autoComplaintTest && result.autoComplaintTest.test === testData.test) {
+                        status.className = 'status success';
+                        status.textContent = '✅ Storage read/write working perfectly!';
+                    } else {
+                        status.className = 'status error';
+                        status.textContent = '❌ Storage data mismatch - something went wrong.';
+                    }
+                });
+            });
+        }
+
+        function testMessage() {
+            const status = document.getElementById('messageStatus');
+            
+            if (typeof chrome === 'undefined' || !chrome.runtime) {
+                status.className = 'status error';
+                status.textContent = '❌ Chrome runtime API not available.';
+                return;
+            }
+
+            // Try to send a test message
+            chrome.runtime.sendMessage({ action: 'test_connection' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    status.className = 'status error';
+                    status.textContent = `❌ Message failed: ${chrome.runtime.lastError.message}`;
+                } else {
+                    status.className = 'status success';
+                    status.textContent = '✅ Message system working!';
+                }
+            });
+        }
+
+        function clearForm() {
+            const form = document.querySelector('.test-form');
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+        }
+
+        // Auto-check extension status on page load
+        window.addEventListener('load', () => {
+            setTimeout(checkExtension, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoComplaint Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .order-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #005c87;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AutoComplaint Extension Test Page</h1>
+        <p>This page simulates an order page to test the AutoComplaint extension.</p>
+        
+        <div class="order-info">
+            <h2>Order Confirmation</h2>
+            <p><strong>Order Number:</strong> AMZ-2025-001234</p>
+            <p><strong>Order Date:</strong> August 19, 2025</p>
+            <p><strong>Total Amount:</strong> ₹2,999.00</p>
+            
+            <h3>Product Details</h3>
+            <p><strong>Product Name:</strong> Wireless Bluetooth Headphones</p>
+            <p><strong>Seller:</strong> TechGear India</p>
+            <p><strong>Delivery Date:</strong> August 22, 2025</p>
+            <p><strong>Tracking Number:</strong> TRK8901234567890</p>
+        </div>
+
+        <div id="test-controls">
+            <h3>Test Extension</h3>
+            <button onclick="testClassifier()">Test Page Classification</button>
+            <button onclick="testExtraction()">Test Data Extraction</button>
+            <button onclick="checkStorage()">Check Stored Data</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<h3>Results:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function clearLogs() {
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+            console.clear();
+        }
+
+        async function testClassifier() {
+            showStatus('Testing page classification...', 'info');
+            try {
+                if (window.AutoComplaint && window.AutoComplaint.isOrderPage) {
+                    const isOrder = await window.AutoComplaint.isOrderPage();
+                    showStatus(`Classification Result: ${isOrder ? 'Order Page ✅' : 'Not an Order Page ❌'}`, 
+                              isOrder ? 'success' : 'error');
+                    showResults({ isOrderPage: isOrder });
+                } else {
+                    showStatus('AutoComplaint extension not loaded or classifier not available', 'error');
+                }
+            } catch (error) {
+                showStatus(`Classification Error: ${error.message}`, 'error');
+                console.error('Classification error:', error);
+            }
+        }
+
+        async function testExtraction() {
+            showStatus('Testing data extraction...', 'info');
+            try {
+                if (window.AutoComplaint && window.AutoComplaint.extractOrderInfo) {
+                    const orderData = await window.AutoComplaint.extractOrderInfo();
+                    if (orderData) {
+                        showStatus('Data extraction successful ✅', 'success');
+                        showResults(orderData);
+                    } else {
+                        showStatus('No order data could be extracted', 'error');
+                    }
+                } else {
+                    showStatus('AutoComplaint extension not loaded or extractor not available', 'error');
+                }
+            } catch (error) {
+                showStatus(`Extraction Error: ${error.message}`, 'error');
+                console.error('Extraction error:', error);
+            }
+        }
+
+        function checkStorage() {
+            showStatus('Checking stored data...', 'info');
+            if (chrome && chrome.storage) {
+                chrome.storage.local.get(['autoComplaintOrder'], (result) => {
+                    if (result.autoComplaintOrder) {
+                        showStatus('Found stored order data ✅', 'success');
+                        showResults(result.autoComplaintOrder);
+                    } else {
+                        showStatus('No stored order data found', 'error');
+                    }
+                });
+            } else {
+                showStatus('Chrome storage API not available (extension context required)', 'error');
+            }
+        }
+
+        // Auto-test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                showStatus('Page loaded. Extension should be running...', 'info');
+                console.log('AutoComplaint test page loaded');
+                console.log('Available globals:', Object.keys(window).filter(key => key.includes('Auto')));
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

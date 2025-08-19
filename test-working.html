@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoComplaint Test Page - Working Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-form {
+            display: grid;
+            gap: 15px;
+        }
+        .form-group {
+            display: grid;
+            gap: 5px;
+        }
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+        input, select, textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        .step {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 AutoComplaint Test Page (Local File Version)</h1>
+    
+    <div class="section">
+        <h2>🔍 Extension Check</h2>
+        <button onclick="checkExtension()">Check if Extension Works</button>
+        <div id="extensionCheck" class="status info">Click the button to test the extension.</div>
+    </div>
+
+    <div class="section">
+        <h2>📋 Setup Instructions</h2>
+        <div class="step">
+            <strong>IMPORTANT: Enable File URL Access</strong>
+            <ol>
+                <li>Go to <code>chrome://extensions/</code></li>
+                <li>Find "AutoComplaint" and click <strong>"Details"</strong></li>
+                <li>Scroll down and turn ON <strong>"Allow access to file URLs"</strong></li>
+                <li>Come back and refresh this page (F5)</li>
+                <li>Try the extension again</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📝 Mock Grievance Form</h2>
+        <p>Use the AutoComplaint extension's "Fill In" button to auto-populate this form:</p>
+        
+        <form class="test-form" id="testForm">
+            <div class="form-group">
+                <label for="grievanceType">Grievance Type:</label>
+                <select id="grievanceType" name="grievanceType">
+                    <option value="">Select Type</option>
+                    <option value="Grievance">Grievance</option>
+                    <option value="Complaint">Complaint</option>
+                    <option value="Feedback">Feedback</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="grievanceClassification">Classification:</label>
+                <select id="grievanceClassification" name="grievanceClassification">
+                    <option value="">Select Classification</option>
+                    <option value="Goods">Goods</option>
+                    <option value="Services">Services</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="sectorIndustry">Sector/Industry:</label>
+                <select id="sectorIndustry" name="sectorIndustry">
+                    <option value="">Select Sector</option>
+                    <option value="E-Commerce">E-Commerce</option>
+                    <option value="Banking">Banking</option>
+                    <option value="Telecom">Telecom</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="orderId">Order ID:</label>
+                <input type="text" id="orderId" name="orderId" placeholder="Order ID will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="productName">Product Name:</label>
+                <input type="text" id="productName" name="productName" placeholder="Product name will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="brand">Brand:</label>
+                <input type="text" id="brand" name="brand" placeholder="Brand will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="price">Price:</label>
+                <input type="text" id="price" name="price" placeholder="Price will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="orderDate">Order Date:</label>
+                <input type="date" id="orderDate" name="orderDate">
+            </div>
+
+            <div class="form-group">
+                <label for="sellerName">Seller Name:</label>
+                <input type="text" id="sellerName" name="sellerName" placeholder="Seller name will be filled here">
+            </div>
+
+            <div class="form-group">
+                <label for="trackingNumber">Tracking Number:</label>
+                <input type="text" id="trackingNumber" name="trackingNumber" placeholder="Tracking number will be filled here">
+            </div>
+
+            <button type="button" onclick="clearForm()">Clear Form</button>
+            <button type="button" onclick="showFormData()">Show Current Data</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>🧪 Testing Steps</h2>
+        <ol>
+            <li><strong>Save Order Data:</strong> Go to Amazon/Flipkart and use "Save Order Details"</li>
+            <li><strong>Return Here:</strong> Come back to this test page</li>
+            <li><strong>Open Extension:</strong> Click the AutoComplaint icon in browser toolbar</li>
+            <li><strong>Use Fill In:</strong> You should see a "Fill In" button - click it</li>
+            <li><strong>Check Form:</strong> The form above should auto-fill with your saved data</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>🚨 Troubleshooting</h2>
+        <div id="troubleshooting">
+            <div class="warning">
+                <strong>If extension popup shows "Extension API not available":</strong><br>
+                1. Make sure "Allow access to file URLs" is enabled<br>
+                2. Refresh this page<br>
+                3. Try opening the extension popup again
+            </div>
+            
+            <div class="warning">
+                <strong>If you don't see "Fill In" button:</strong><br>
+                1. Make sure this page URL contains "test.html"<br>
+                2. Reload the extension in chrome://extensions/<br>
+                3. Refresh this page
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkExtension() {
+            const result = document.getElementById('extensionCheck');
+            
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                result.className = 'status success';
+                result.innerHTML = '✅ Extension APIs are working! The AutoComplaint extension should work on this page.';
+            } else {
+                result.className = 'status error';
+                result.innerHTML = `
+                    ❌ Extension APIs not available. 
+                    <br><br><strong>Fix this by:</strong>
+                    <br>1. Go to chrome://extensions/
+                    <br>2. Click "Details" on AutoComplaint
+                    <br>3. Enable "Allow access to file URLs"
+                    <br>4. Refresh this page
+                `;
+            }
+        }
+
+        function clearForm() {
+            const form = document.getElementById('testForm');
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+        }
+
+        function showFormData() {
+            const form = document.getElementById('testForm');
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            // Also get inputs that might not be in FormData
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                if (input.name) {
+                    data[input.name] = input.value;
+                }
+            });
+            
+            alert('Current form data:\n' + JSON.stringify(data, null, 2));
+        }
+
+        // Auto-check extension on page load
+        window.addEventListener('load', () => {
+            setTimeout(checkExtension, 1000);
+        });
+
+        // Listen for form changes and show success message
+        document.getElementById('testForm').addEventListener('input', function() {
+            const filledFields = Array.from(this.querySelectorAll('input, select'))
+                .filter(field => field.value.trim() !== '').length;
+            
+            if (filledFields > 3) {
+                const result = document.getElementById('extensionCheck');
+                result.className = 'status success';
+                result.innerHTML = `✅ Form filling detected! ${filledFields} fields have been filled.`;
+            }
+        });
+    </script>
+</body>
+</html>

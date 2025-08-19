@@ -5,157 +5,180 @@
 (function() {
   console.log('🚀 Enhanced Consumer Portal Auto-Fill v3.0 loaded - Grievance Form Optimized');
 
-  // Utility function to simulate realistic typing
-  const typeIntoField = async (field, text) => {
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    
-    // Clear existing value
-    field.value = '';
-    field.dispatchEvent(new Event('focus'));
-    
-    // Type each character with a realistic delay
-    for (let char of text) {
-      field.value += char;
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      field.dispatchEvent(new KeyboardEvent('keydown', { key: char }));
-      await delay(50 + Math.random() * 50); // Random delay between 50-100ms
-    }
-    
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-    await delay(300); // Wait for dropdown to appear
-  };
-
-  // Function to find and select matching dropdown option
-  const selectMatchingOption = async (field, value) => {
-    // Try direct value match first
-    if (field.tagName === 'SELECT') {
-      for (let option of field.options) {
-        if (option.text.toLowerCase().includes(value.toLowerCase())) {
-          option.selected = true;
-          field.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        }
-      }
-    }
-
-    // For searchable dropdowns, type and wait for options
-    await typeIntoField(field, value);
-
-    // Look for dropdown list that appeared
-    const dropdownLists = [
-      ...document.querySelectorAll('.dropdown-list, .select-options, .suggestions, [class*="dropdown"], [class*="autocomplete"]'),
-      ...document.querySelectorAll('ul[style*="display: block"], div[style*="display: block"] > ul')
-    ];
-
-    for (const list of dropdownLists) {
-      const options = list.querySelectorAll('li, .option, [role="option"]');
-      for (const option of options) {
-        if (option.textContent.toLowerCase().includes(value.toLowerCase())) {
-          option.click();
-          return true;
-        }
-      }
-    }
-
-    return false;
-  };
-
   // Enhanced field mappings for grievance forms
   const fieldMappings = {
-    // Grievance Type
-    grievanceType: [
-      'select[name*="grievance"][name*="type"]',
-      'select[name*="complaint"][name*="type"]',
-      '#grievanceType',
-      '.grievance-type-dropdown'
-    ],
-
-    // Grievance Classification
-    grievanceClassification: [
-      'select[name*="grievance"][name*="classification"]',
-      'select[name*="complaint"][name*="classification"]',
-      '#grievanceClassification',
-      '.grievance-classification-dropdown'
-    ],
-
-    // State
-    state: [
-      'select[name*="state"]',
-      '#state',
-      '.state-dropdown',
-      'select[aria-label*="State"]'
-    ],
-
-    // Purchase City
-    purchaseCity: [
-      'select[name*="city"]',
-      'select[name*="purchase"][name*="city"]',
-      '#city',
-      '.city-dropdown',
-      'select[aria-label*="City"]'
-    ],
-
-    // Sector/Industry
-    sectorIndustry: [
-      'select[name*="sector"]',
-      'select[name*="industry"]',
-      '#sector',
-      '#industry',
-      '.sector-dropdown',
-      '.industry-dropdown',
-      'select[aria-label*="Sector"]',
-      'select[aria-label*="Industry"]'
-    ],
-
-    // Category
-    category: [
-      'select[name*="category"]',
-      'select[name*="product"][name*="category"]',
-      '#category',
-      '.category-dropdown',
-      'select[aria-label*="Category"]'
-    ],
-
-    // Company
+    // Company/Seller Information
     company: [
       'select[name*="company"]',
-      'select[name*="seller"]',
+      'select[name*="seller"]', 
       'select[name*="brand"]',
-      '#company',
-      '.company-dropdown',
-      'select[aria-label*="Company"]'
+      'input[name*="company"]',
+      'input[name*="seller"]',
+      '#company-select',
+      '.company-dropdown'
     ],
-
-    // Nature of Grievance
-    natureOfGrievance: [
-      'select[name*="nature"]',
-      'select[name*="grievance"][name*="nature"]',
-      '#natureOfGrievance',
-      '.nature-dropdown',
-      'select[aria-label*="Nature of Grievance"]'
-    ],
-
-    // Product Value
+    
+    // Product Value/Price
     productValue: [
       'select[name*="product"][name*="value"]',
       'select[name*="price"]',
       'select[name*="amount"]',
-      '#productValue',
-      '.product-value-dropdown',
-      'select[aria-label*="Product Value"]'
+      'input[name*="value"]',
+      'input[name*="price"]',
+      'input[name*="amount"]',
+      '#product-value-select',
+      '.product-value-dropdown'
     ],
-
+    
+    // Purchase City
+    purchaseCity: [
+      'select[name*="city"]',
+      'select[name*="purchase"][name*="city"]',
+      'input[name*="city"]',
+      '#city-select',
+      '.city-dropdown'
+    ],
+    
+    // Category
+    category: [
+      'select[name*="category"]',
+      'select[name*="product"][name*="category"]',
+      '#category-select',
+      '.category-dropdown'
+    ],
+    
+    // Sector/Industry
+    sectorIndustry: [
+      'select[name*="sector"]',
+      'select[name*="industry"]',
+      'select[name*="business"]',
+      '#sector-select',
+      '#industry-select',
+      '.sector-dropdown'
+    ],
+    
     // Dealer Information
     dealerInfo: [
       'textarea[name*="dealer"]',
-      'textarea[name*="seller"][name*="info"]',
+      'textarea[name*="seller"]',
       'textarea[name*="contact"]',
-      '#dealerInfo',
-      '.dealer-info-field',
-      'textarea[aria-label*="Dealer"]',
-      'textarea[placeholder*="dealer"]'
+      'input[name*="dealer"]',
+      'input[name*="seller"]',
+      '#dealer-info',
+      '.dealer-textarea'
+    ],
+    
+    // Customer Details
+    customerName: [
+      'input[name*="customer"][name*="name"]',
+      'input[name*="consumer"][name*="name"]',
+      'input[name*="name"]',
+      '#customer-name',
+      '#consumer-name'
+    ],
+    
+    email: [
+      'input[type="email"]',
+      'input[name*="email"]',
+      '#email',
+      '.email-input'
+    ],
+    
+    phone: [
+      'input[type="tel"]',
+      'input[name*="phone"]',
+      'input[name*="mobile"]',
+      'input[name*="contact"]',
+      '#phone',
+      '#mobile'
+    ],
+    
+    // Order Details
+    orderId: [
+      'input[name*="order"][name*="id"]',
+      'input[name*="order"][name*="number"]',
+      'input[name*="reference"]',
+      'textarea[name*="order"]',
+      '#order-id',
+      '#order-number'
+    ],
+    
+    productName: [
+      'input[name*="product"][name*="name"]',
+      'textarea[name*="product"]',
+      'input[name*="item"]',
+      '#product-name',
+      '.product-input'
     ]
   };
+
+  // Enhanced dropdown setting with intelligent matching
+  function setDropdown(selector, value, fieldType) {
+    const select = document.querySelector(selector);
+    if (!select || !value) return { success: false, reason: 'No select element or value' };
+    
+    console.log(`🎯 Setting dropdown ${fieldType}:`, value);
+    
+    const searchValue = value.toString().toLowerCase().trim();
+    
+    // Strategy 1: Exact match
+    for (const option of select.options) {
+      if (option.text.trim().toLowerCase() === searchValue) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log(`✅ Exact match found for ${fieldType}`);
+        return { success: true, method: 'exact', selectedText: option.text };
+      }
+    }
+    
+    // Strategy 2: Partial match
+    for (const option of select.options) {
+      if (option.text.toLowerCase().includes(searchValue) || searchValue.includes(option.text.toLowerCase())) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log(`✅ Partial match found for ${fieldType}:`, option.text);
+        return { success: true, method: 'partial', selectedText: option.text };
+      }
+    }
+    
+    // Strategy 3: Smart matching for specific field types
+    if (fieldType === 'productValue') {
+      const numericValue = parseFloat(value.replace(/[₹,]/g, ''));
+      if (numericValue) {
+        for (const option of select.options) {
+          const optionText = option.text.toLowerCase();
+          if (optionText.includes('above') && numericValue > 50000) {
+            select.value = option.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, method: 'range', selectedText: option.text };
+          }
+        }
+      }
+    }
+    
+    // Strategy 4: If "Other" option exists, select it
+    for (const option of select.options) {
+      if (option.text.toLowerCase().includes('other')) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Look for associated text input that appears after selecting "Other"
+        setTimeout(() => {
+          const textInput = document.querySelector('input[type="text"]:not([style*="display: none"])');
+          if (textInput && textInput.offsetParent !== null) {
+            textInput.value = value;
+            textInput.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log(`✅ Selected "Other" and filled text for ${fieldType}`);
+          }
+        }, 500);
+        
+        return { success: true, method: 'other', selectedText: option.text };
+      }
+    }
+    
+    console.log(`⚠️ No suitable option found for ${fieldType}:`, value);
+    return { success: false, reason: 'No suitable option found' };
+  }
 
   // Enhanced text field setting
   function setTextField(selector, value, fieldType) {
@@ -198,9 +221,8 @@
           if (!element || element.offsetParent === null) continue; // Skip hidden elements
           
           let result;
-          if (element.tagName === 'SELECT' || element.classList.contains('dropdown') || 
-              element.getAttribute('role') === 'combobox') {
-            result = selectMatchingOption(element, value);
+          if (element.tagName === 'SELECT') {
+            result = setDropdown(selector, value, fieldType);
           } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
             result = setTextField(selector, value, fieldType);
           }
@@ -371,14 +393,6 @@
               error: error.message
             });
           });
-      } else if (message.action === 'fillGrievanceForm') {
-        fillGrievanceForm(message.data)
-          .then(() => sendResponse({ success: true }))
-          .catch(error => {
-            console.error('Error filling form:', error);
-            sendResponse({ success: false, error: error.message });
-          });
-        return true; // Will respond asynchronously
       }
       
       return true; // Keep message channel open for async response

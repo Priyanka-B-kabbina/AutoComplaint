@@ -9,28 +9,120 @@
 </head>
 <body>
   <div class="container">
-    <h2>Review Order Details</h2>
-    <div id="actionSection"></div>
+    <div class="header">
+      <img src="assets/robot_logo.png" alt="AutoComplaint Logo" class="logo" style="width:48px;height:48px;max-width:48px;max-height:48px;" />
+      <div class="brand-title">AutoComplaint</div>
+      <div class="tagline">Filing your consumer grievances in seconds</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="basic">Basic Info</button>
+      <button class="tab-btn" data-tab="grievance">Grievance Info</button>
+    </div>
+
     <form id="orderForm">
-      <label><i class="fa-solid fa-hashtag"></i> Order ID <input type="text" id="orderId" name="orderId" required></label>
-      <label><i class="fa-solid fa-box"></i> Product Name <input type="text" id="productName" name="productName" required></label>
-      <label><i class="fa-solid fa-industry"></i> Brand <input type="text" id="brand" name="brand"></label>
-      <label><i class="fa-solid fa-tags"></i> Product Category <input type="text" id="productCategory" name="productCategory"></label>
-      <label><i class="fa-solid fa-indian-rupee-sign"></i> Price <input type="text" id="price" name="price"></label>
-      <label><i class="fa-solid fa-calendar-day"></i> Order Date <input type="text" id="orderDate" name="orderDate"></label>
-      <label><i class="fa-solid fa-calendar-check"></i> Delivery Date <input type="text" id="deliveryDate" name="deliveryDate"></label>
-      <label><i class="fa-solid fa-store"></i> Seller Name <input type="text" id="sellerName" name="sellerName"></label>
-      <label><i class="fa-solid fa-image"></i> Product Image URL <input type="text" id="productImage" name="productImage"></label>
-      <label><i class="fa-solid fa-truck"></i> Tracking Number <input type="text" id="trackingNumber" name="trackingNumber"></label>
-      <label><i class="fa-solid fa-link"></i> Order Details Page URL <input type="text" id="orderDetailsPageUrl" name="orderDetailsPageUrl" readonly></label>
-      <div class="image-upload-section">
-        <label><i class="fa-solid fa-upload"></i> Upload Images (max 3, 5MB each)</label>
-        <input type="file" id="imageUpload" accept="image/*" multiple style="display:none;">
-        <div id="imageDrop" class="image-drop">Drag & drop or click to upload</div>
-        <div id="imagePreview" class="image-preview"></div>
+      <!-- Basic Info Tab -->
+      <div class="tab-content active" id="basic-tab">
+        <h2 class="section-title">Order Details
+          <span class="info-tooltip" title="Basic order information">
+            <i class="fa-solid fa-circle-info"></i>
+          </span>
+        </h2>
+        
+        <div class="form-group">
+          <label title="Unique order number from your receipt."><i class="fa-solid fa-hashtag"></i> Order ID</label>
+          <input type="text" id="orderId" name="orderId" required placeholder="e.g. 402-xxxx-xxxx" />
+        </div>
+        
+        <div class="form-group">
+          <label title="Name of the product you ordered."><i class="fa-solid fa-box"></i> Product Name</label>
+          <input type="text" id="productName" name="productName" required placeholder="e.g. Bluetooth Speaker" />
+        </div>
+        
+        <div class="form-group">
+          <label title="Price paid for the product."><i class="fa-solid fa-indian-rupee-sign"></i> Price</label>
+          <input type="text" id="price" name="price" placeholder="e.g. ₹2,299.00" />
+        </div>
+        
+        <div class="form-group">
+          <label title="Company or seller name"><i class="fa-solid fa-building"></i> Company/Seller</label>
+          <input type="text" id="company" name="company" placeholder="e.g. TechRetail India Pvt Ltd" />
+        </div>
+        
+        <div class="form-group">
+          <label title="Dealer contact information"><i class="fa-solid fa-address-card"></i> Dealer Info</label>
+          <textarea id="dealerInfo" name="dealerInfo" placeholder="Dealer name, address, email, contact..." rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- Grievance Info Tab -->
+      <div class="tab-content" id="grievance-tab">
+        <h2 class="section-title">Grievance Details
+          <span class="info-tooltip" title="Information for filing your grievance">
+            <i class="fa-solid fa-circle-info"></i>
+          </span>
+        </h2>
+
+        <div class="form-group">
+          <label title="Type of grievance"><i class="fa-solid fa-exclamation-circle"></i> Grievance Type</label>
+          <select id="grievanceType" name="grievanceType" required>
+            <option value="">Select Type</option>
+            <option value="Grievance" selected>Grievance</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label title="Grievance classification"><i class="fa-solid fa-list"></i> Classification</label>
+          <select id="grievanceClassification" name="grievanceClassification" required>
+            <option value="">Select Classification</option>
+            <option value="Consumer Complaint" selected>Consumer Complaint</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label title="State where purchase was made"><i class="fa-solid fa-map-marker-alt"></i> State</label>
+          <input type="text" id="state" name="state" placeholder="e.g. Maharashtra" />
+        </div>
+
+        <div class="form-group">
+          <label title="City where purchase was made"><i class="fa-solid fa-city"></i> Purchase City</label>
+          <input type="text" id="purchaseCity" name="purchaseCity" placeholder="e.g. Mumbai" />
+        </div>
+
+        <div class="form-group">
+          <label title="Industry sector"><i class="fa-solid fa-industry"></i> Sector/Industry</label>
+          <input type="text" id="sectorIndustry" name="sectorIndustry" placeholder="e.g. E-commerce" />
+        </div>
+
+        <div class="form-group">
+          <label title="Product category"><i class="fa-solid fa-tags"></i> Category</label>
+          <input type="text" id="category" name="category" placeholder="e.g. Electronics & Digital Goods" />
+        </div>
+
+        <div class="form-group">
+          <label title="Nature of your grievance"><i class="fa-solid fa-comment-dots"></i> Nature of Grievance</label>
+          <select id="natureOfGrievance" name="natureOfGrievance">
+            <option value="">Select Nature</option>
+            <option value="Product Quality Issue">Product Quality Issue</option>
+            <option value="Service Issue">Service Issue</option>
+            <option value="Delivery Issue">Delivery Issue</option>
+            <option value="Refund Issue">Refund Issue</option>
+          </select>
+        </div>
       </div>
     </form>
+
+    <div class="action-buttons">
+      <button id="saveOrderBtn" class="primary-btn">
+        <i class="fa-solid fa-save"></i> Save Order Details
+      </button>
+      <button id="fillInBtn" class="primary-btn">
+        <i class="fa-solid fa-paper-plane"></i> Fill Grievance Form
+      </button>
+    </div>
+
+    <div id="toast" class="toast"></div>
   </div>
   <script src="popup.js"></script>
 </body>
-</html> 
+</html>

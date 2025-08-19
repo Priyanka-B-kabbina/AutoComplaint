@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoComplaint Classifier Training Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        
+        #testArea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AutoComplaint Custom Classifier Training</h1>
+        
+        <div class="section">
+            <h2>📊 Model Status</h2>
+            <div id="modelStatus" class="status info">Loading...</div>
+            <button onclick="checkStatus()">🔄 Refresh Status</button>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Training Controls</h2>
+            <button onclick="trainModel()" id="trainBtn">🚀 Train Model</button>
+            <button onclick="trainModel(true)" id="retrainBtn">🔄 Force Retrain</button>
+            <button onclick="evaluateModel()" id="evalBtn">📈 Evaluate Model</button>
+            <div id="trainingProgress" style="display: none;">
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+                <div id="trainingLog" class="log"></div>
+            </div>
+            <div id="trainingResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Test Classifier</h2>
+            <textarea id="testArea" placeholder="Enter text to classify (e.g., 'Order #12345 Total: $99.99' or 'Welcome to our store')"></textarea>
+            <br>
+            <button onclick="testText()">🔍 Test Text</button>
+            <button onclick="loadSampleTexts()">📝 Load Sample Tests</button>
+            <div id="testResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>📚 Sample Training Data</h2>
+            <p>Current training dataset contains examples like:</p>
+            <ul>
+                <li><strong>Order Examples:</strong> "Order #AMZ-123456 Total: $49.99", "Invoice #INV-789012 Amount: ₹2,999"</li>
+                <li><strong>Non-Order Examples:</strong> "Welcome to our store", "About Us - We are a leading retailer"</li>
+            </ul>
+            <button onclick="showTrainingData()">📖 View Training Data</button>
+            <div id="trainingDataView"></div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Quick Actions</h2>
+            <button onclick="quickStart()">⚡ Quick Start (Train + Test)</button>
+            <button onclick="resetModel()">🗑️ Reset Model</button>
+            <button onclick="exportResults()">💾 Export Results</button>
+        </div>
+
+        <div id="console" class="log" style="display: none;"></div>
+    </div>
+
+    <!-- Load TensorFlow.js and the classifier -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script type="module">
+        // Import the classifier trainer
+        import('./classifier_trainer.js').then(module => {
+            window.ClassifierTrainer = module.ClassifierTrainer;
+            initializePage();
+        }).catch(error => {
+            console.error('Failed to load classifier trainer:', error);
+            updateStatus('❌ Failed to load classifier trainer: ' + error.message, 'error');
+        });
+
+        let trainer = null;
+        let consoleOutput = [];
+
+        // Capture console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = (...args) => {
+            originalLog(...args);
+            logToUI('LOG: ' + args.join(' '));
+        };
+
+        console.error = (...args) => {
+            originalError(...args);
+            logToUI('ERROR: ' + args.join(' '));
+        };
+
+        console.warn = (...args) => {
+            originalWarn(...args);
+            logToUI('WARN: ' + args.join(' '));
+        };
+
+        function logToUI(message) {
+            consoleOutput.push(new Date().toLocaleTimeString() + ' ' + message);
+            const consoleDiv = document.getElementById('console');
+            if (consoleOutput.length > 100) consoleOutput.shift(); // Keep last 100 entries
+            consoleDiv.innerHTML = consoleOutput.join('<br>');
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('modelStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function showProgress(show = true) {
+            document.getElementById('trainingProgress').style.display = show ? 'block' : 'none';
+            document.getElementById('console').style.display = show ? 'block' : 'none';
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        async function initializePage() {
+            updateStatus('🔄 Initializing classifier trainer...', 'info');
+            try {
+                trainer = new window.ClassifierTrainer();
+                await trainer.initialize();
+                await checkStatus();
+                updateStatus('✅ Trainer initialized successfully', 'success');
+            } catch (error) {
+                updateStatus('❌ Failed to initialize: ' + error.message, 'error');
+            }
+        }
+
+        window.checkStatus = async function() {
+            if (!trainer) return;
+            try {
+                const status = trainer.extractor.getClassifierStatus();
+                let message = `Trained: ${status.trained}, Training: ${status.isTraining}, Model Exists: ${status.modelExists}`;
+                updateStatus('📊 ' + message, status.trained ? 'success' : 'info');
+            } catch (error) {
+                updateStatus('❌ Status check failed: ' + error.message, 'error');
+            }
+        }
+
+        window.trainModel = async function(forceRetrain = false) {
+            if (!trainer) return;
+            
+            const btn = document.getElementById(forceRetrain ? 'retrainBtn' : 'trainBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Training...';
+            showProgress(true);
+            updateProgress(0);
+            
+            try {
+                updateStatus('🎯 Training classifier...', 'info');
+                updateProgress(25);
+                
+                const result = await trainer.trainModel(forceRetrain);
+                updateProgress(100);
+                
+                if (result.success) {
+                    updateStatus('✅ Training completed: ' + result.message, 'success');
+                    document.getElementById('trainingResult').innerHTML = 
+                        `<div class="result">✅ Training completed successfully!</div>`;
+                } else {
+                    updateStatus('❌ Training failed: ' + result.message, 'error');
+                    document.getElementById('trainingResult').innerHTML = 
+                        `<div class="result" style="border-left-color: #dc3545;">❌ Training failed: ${result.message}</div>`;
+                }
+            } catch (error) {
+                updateStatus('❌ Training error: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = forceRetrain ? '🔄 Force Retrain' : '🚀 Train Model';
+                setTimeout(() => showProgress(false), 3000);
+            }
+        }
+
+        window.evaluateModel = async function() {
+            if (!trainer) return;
+            
+            const btn = document.getElementById('evalBtn');
+            btn.disabled = true;
+            btn.textContent = '📈 Evaluating...';
+            showProgress(true);
+            
+            try {
+                updateStatus('📈 Evaluating model...', 'info');
+                const evaluation = await trainer.evaluateModel();
+                
+                let resultHTML = `
+                    <div class="result">
+                        <h3>📊 Evaluation Results</h3>
+                        <p><strong>Accuracy:</strong> ${evaluation.testResults.accuracy}%</p>
+                        <p><strong>Correct Predictions:</strong> ${evaluation.testResults.correctPredictions}/${evaluation.testResults.totalTests}</p>
+                        <h4>Detailed Results:</h4>
+                        <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
+                            <tr style="background:#f8f9fa;">
+                                <th style="padding:8px; border:1px solid #ddd;">Text</th>
+                                <th style="padding:8px; border:1px solid #ddd;">Expected</th>
+                                <th style="padding:8px; border:1px solid #ddd;">Predicted</th>
+                                <th style="padding:8px; border:1px solid #ddd;">Confidence</th>
+                                <th style="padding:8px; border:1px solid #ddd;">Result</th>
+                            </tr>
+                `;
+                
+                evaluation.testResults.results.forEach(result => {
+                    resultHTML += `
+                        <tr>
+                            <td style="padding:8px; border:1px solid #ddd; font-size:12px;">${result.text}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${result.expected}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${result.predicted}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${result.confidence}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${result.correct ? '✅' : '❌'}</td>
+                        </tr>
+                    `;
+                });
+                
+                resultHTML += '</table></div>';
+                document.getElementById('trainingResult').innerHTML = resultHTML;
+                updateStatus(`✅ Evaluation complete: ${evaluation.testResults.accuracy}% accuracy`, 'success');
+                
+            } catch (error) {
+                updateStatus('❌ Evaluation failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📈 Evaluate Model';
+                setTimeout(() => showProgress(false), 2000);
+            }
+        }
+
+        window.testText = async function() {
+            if (!trainer) return;
+            
+            const text = document.getElementById('testArea').value.trim();
+            if (!text) {
+                alert('Please enter some text to test');
+                return;
+            }
+            
+            try {
+                const result = await trainer.extractor.testCustomClassifier(text);
+                
+                if (result.success) {
+                    const { label, confidence, scores } = result.result;
+                    document.getElementById('testResult').innerHTML = `
+                        <div class="result">
+                            <h3>🔍 Classification Result</h3>
+                            <p><strong>Text:</strong> "${text}"</p>
+                            <p><strong>Prediction:</strong> ${label}</p>
+                            <p><strong>Confidence:</strong> ${(confidence * 100).toFixed(1)}%</p>
+                            <p><strong>Scores:</strong> Non-Order: ${(scores[0] * 100).toFixed(1)}%, Order: ${(scores[1] * 100).toFixed(1)}%</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('testResult').innerHTML = `
+                        <div class="result" style="border-left-color: #dc3545;">
+                            ❌ Test failed: ${result.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                updateStatus('❌ Test failed: ' + error.message, 'error');
+            }
+        }
+
+        window.loadSampleTexts = function() {
+            const samples = [
+                "Order #AMZ-123456 Total: $49.99 Delivery Date: March 15, 2024",
+                "Invoice #INV-789012 Amount: ₹2,999 GST: ₹359.88 Total: ₹3,358.88",
+                "Welcome to our online store! Browse thousands of products",
+                "Order Confirmation Order Number: 12345-ABCDE Total Amount: $127.50",
+                "About Us - We are a leading retailer established in 1995"
+            ];
+            document.getElementById('testArea').value = samples[Math.floor(Math.random() * samples.length)];
+        }
+
+        window.quickStart = async function() {
+            updateStatus('⚡ Starting quick training and evaluation...', 'info');
+            await trainModel();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await evaluateModel();
+        }
+
+        window.resetModel = async function() {
+            if (confirm('Are you sure you want to reset the model? This will clear all training data.')) {
+                try {
+                    localStorage.removeItem('tensorflowjs_models/order-classifier/info');
+                    localStorage.removeItem('tensorflowjs_models/order-classifier/model_topology');
+                    localStorage.removeItem('tensorflowjs_models/order-classifier/weight_specs');
+                    localStorage.removeItem('tensorflowjs_models/order-classifier/weight_data');
+                    updateStatus('🗑️ Model reset successfully', 'success');
+                    location.reload();
+                } catch (error) {
+                    updateStatus('❌ Reset failed: ' + error.message, 'error');
+                }
+            }
+        }
+
+        window.showTrainingData = async function() {
+            try {
+                const response = await fetch('/training_data.jsonl');
+                const text = await response.text();
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                let html = `<div class="result"><h3>📚 Training Data (${lines.length} examples)</h3>`;
+                lines.slice(0, 10).forEach((line, i) => {
+                    const data = JSON.parse(line);
+                    html += `<p><strong>${i+1}:</strong> "${data.text.substring(0, 80)}..." → <em>${data.label}</em></p>`;
+                });
+                if (lines.length > 10) {
+                    html += `<p><em>... and ${lines.length - 10} more examples</em></p>`;
+                }
+                html += '</div>';
+                
+                document.getElementById('trainingDataView').innerHTML = html;
+            } catch (error) {
+                document.getElementById('trainingDataView').innerHTML = 
+                    `<div class="result" style="border-left-color: #dc3545;">❌ Failed to load training data: ${error.message}</div>`;
+            }
+        }
+
+        window.exportResults = function() {
+            const results = {
+                timestamp: new Date().toISOString(),
+                status: trainer ? trainer.extractor.getClassifierStatus() : null,
+                consoleLog: consoleOutput
+            };
+            
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `autocomplaint-classifier-results-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

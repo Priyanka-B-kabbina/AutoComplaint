@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DistilBERT MNLI Classifier Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .order { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .non-order { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .loading { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <h1>🤖 DistilBERT MNLI Order Classifier Test</h1>
+    
+    <div class="test-section">
+        <h3>📝 Test Custom Text</h3>
+        <textarea id="customText" placeholder="Enter text to classify...">Your order #AMZ-12345 has been confirmed. iPhone 14 Pro - $999.99. Estimated delivery: January 15, 2024. Thank you for your purchase!</textarea>
+        <button onclick="testCustomText()">🧠 Classify with DistilBERT MNLI</button>
+        <div id="customResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔬 Pre-defined Test Cases</h3>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🌐 Current Page Classification</h3>
+        <button onclick="testCurrentPage()">📄 Classify This Page</button>
+        <div id="pageResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>ℹ️ Model Information</h3>
+        <div id="modelInfo"></div>
+    </div>
+
+    <!-- Load transformers library -->
+    <script type="module">
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+        window.pipeline = pipeline;
+    </script>
+
+    <!-- Load DistilBERT classifier -->
+    <script src="src/distilbert-mnli-classifier.js"></script>
+
+    <script>
+        let classifier = null;
+
+        // Test data
+        const testCases = [
+            {
+                text: "Your order #AMZ-123456 has been confirmed. Total: $299.99. Estimated delivery: Jan 15, 2024",
+                expected: true,
+                label: "Order Confirmation"
+            },
+            {
+                text: "Order Summary - iPhone 14 Pro Max 256GB. Quantity: 1. Subtotal: $1,099.00. Tax: $87.92. Total: $1,186.92",
+                expected: true,
+                label: "Order Summary"
+            },
+            {
+                text: "About Us - We are a leading technology company founded in 1995. Our mission is to innovate.",
+                expected: false,
+                label: "About Page"
+            },
+            {
+                text: "Search results for 'smartphone' - 2,847 products found. Sort by: Best Match, Price, Customer Rating",
+                expected: false,
+                label: "Search Results"
+            },
+            {
+                text: "Shopping Cart (3 items) - iPhone Case $19.99, Screen Protector $12.99, Wireless Charger $39.99",
+                expected: true,
+                label: "Shopping Cart"
+            },
+            {
+                text: "Product Details - Samsung Galaxy S23 Ultra. 6.8-inch display, 200MP camera, 5000mAh battery",
+                expected: false,
+                label: "Product Page"
+            }
+        ];
+
+        async function initializeClassifier() {
+            if (classifier) return classifier;
+            
+            try {
+                updateModelInfo("🔄 Loading DistilBERT MNLI model...");
+                classifier = new DistilBERTMNLIClassifier();
+                await classifier.loadModel();
+                updateModelInfo("✅ DistilBERT MNLI model loaded successfully");
+                return classifier;
+            } catch (error) {
+                updateModelInfo(`❌ Failed to load model: ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function testCustomText() {
+            const text = document.getElementById('customText').value;
+            const resultDiv = document.getElementById('customResult');
+            
+            if (!text.trim()) {
+                resultDiv.innerHTML = '<div class="result">Please enter some text to classify.</div>';
+                return;
+            }
+
+            try {
+                resultDiv.innerHTML = '<div class="result">🔄 Classifying with DistilBERT MNLI...</div>';
+                
+                await initializeClassifier();
+                const result = await classifier.classify(text);
+                
+                const resultClass = result.isOrder ? 'order' : 'non-order';
+                const emoji = result.isOrder ? '✅' : '❌';
+                
+                resultDiv.innerHTML = `
+                    <div class="result ${resultClass}">
+                        <strong>${emoji} Classification: ${result.isOrder ? 'ORDER PAGE' : 'NON-ORDER PAGE'}</strong><br>
+                        <strong>Confidence:</strong> ${(result.confidence * 100).toFixed(1)}%<br>
+                        <strong>Top Label:</strong> ${result.topLabel}<br>
+                        <strong>Method:</strong> ${result.method}<br>
+                        <details>
+                            <summary>All Predictions</summary>
+                            ${result.allPredictions.map(p => 
+                                `<div>${p.label}: ${(p.score * 100).toFixed(1)}%</div>`
+                            ).join('')}
+                        </details>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function runAllTests() {
+            const resultDiv = document.getElementById('testResults');
+            resultDiv.innerHTML = '<div class="result">🔄 Running test suite...</div>';
+            
+            try {
+                await initializeClassifier();
+                
+                let results = '<h4>📊 Test Results</h4>';
+                let correctCount = 0;
+                
+                for (let i = 0; i < testCases.length; i++) {
+                    const testCase = testCases[i];
+                    try {
+                        const result = await classifier.classify(testCase.text);
+                        const isCorrect = result.isOrder === testCase.expected;
+                        correctCount += isCorrect ? 1 : 0;
+                        
+                        const emoji = isCorrect ? '✅' : '❌';
+                        const resultClass = result.isOrder ? 'order' : 'non-order';
+                        
+                        results += `
+                            <div class="result ${resultClass}">
+                                ${emoji} <strong>${testCase.label}</strong><br>
+                                Predicted: ${result.isOrder ? 'ORDER' : 'NON-ORDER'} 
+                                (${(result.confidence * 100).toFixed(1)}%)<br>
+                                Expected: ${testCase.expected ? 'ORDER' : 'NON-ORDER'}<br>
+                                Top Label: ${result.topLabel}
+                            </div>
+                        `;
+                    } catch (error) {
+                        results += `<div class="result">❌ ${testCase.label}: Error - ${error.message}</div>`;
+                    }
+                }
+                
+                const accuracy = ((correctCount / testCases.length) * 100).toFixed(1);
+                results = `<div class="result"><strong>📈 Accuracy: ${accuracy}% (${correctCount}/${testCases.length})</strong></div>` + results;
+                
+                resultDiv.innerHTML = results;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result">❌ Test suite failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testCurrentPage() {
+            const resultDiv = document.getElementById('pageResult');
+            resultDiv.innerHTML = '<div class="result">🔄 Analyzing current page...</div>';
+            
+            try {
+                await initializeClassifier();
+                const result = await classifier.classifyPage();
+                
+                const resultClass = result.isOrder ? 'order' : 'non-order';
+                const emoji = result.isOrder ? '✅' : '❌';
+                
+                resultDiv.innerHTML = `
+                    <div class="result ${resultClass}">
+                        <strong>${emoji} Page Classification: ${result.isOrder ? 'ORDER PAGE' : 'NON-ORDER PAGE'}</strong><br>
+                        <strong>Confidence:</strong> ${(result.confidence * 100).toFixed(1)}%<br>
+                        <strong>Top Label:</strong> ${result.topLabel}<br>
+                        <strong>Content Length:</strong> ${result.pageInfo.contentLength} characters<br>
+                        <strong>URL:</strong> ${result.pageInfo.url}<br>
+                        <strong>Title:</strong> ${result.pageInfo.title}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function updateModelInfo(message) {
+            document.getElementById('modelInfo').innerHTML = `<div class="result">${message}</div>`;
+            
+            if (classifier) {
+                const info = classifier.getModelInfo();
+                document.getElementById('modelInfo').innerHTML += `
+                    <div class="result">
+                        <strong>Model:</strong> ${info.name}<br>
+                        <strong>HuggingFace Model:</strong> ${info.model}<br>
+                        <strong>Type:</strong> ${info.type}<br>
+                        <strong>Loaded:</strong> ${info.loaded ? '✅' : '❌'}<br>
+                        <strong>Cache Size:</strong> ${info.cacheSize} entries
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            updateModelInfo("🔄 Ready to load DistilBERT MNLI model");
+        });
+    </script>
+</body>
+</html>
