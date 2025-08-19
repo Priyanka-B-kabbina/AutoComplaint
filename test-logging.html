@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Test Logging</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .order-details { border: 1px solid #ddd; padding: 20px; margin: 20px 0; }
+        .order-summary { background: #f9f9f9; padding: 15px; margin: 10px 0; }
+        .price { font-weight: bold; color: #e47911; }
+        .total { font-size: 1.2em; font-weight: bold; }
+        .order-id { color: #666; font-family: monospace; }
+        .status { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Order Confirmation</h1>
+    
+    <div class="order-details">
+        <h2>Thank you for your purchase!</h2>
+        <p>Your order has been confirmed and will be processed shortly.</p>
+        
+        <div class="order-summary">
+            <h3>Order Summary</h3>
+            <p><strong>Order ID:</strong> <span class="order-id">ORD-2025-08-20-12345</span></p>
+            <p><strong>Order Date:</strong> August 20, 2025</p>
+            <p><strong>Status:</strong> <span class="status">Confirmed</span></p>
+        </div>
+        
+        <div class="items">
+            <h3>Items Ordered</h3>
+            <div class="item">
+                <p><strong>Product:</strong> Premium Wireless Headphones</p>
+                <p><strong>Quantity:</strong> 1</p>
+                <p><strong>Price:</strong> <span class="price">$149.99</span></p>
+            </div>
+            <div class="item">
+                <p><strong>Product:</strong> USB-C Cable</p>
+                <p><strong>Quantity:</strong> 2</p>
+                <p><strong>Price:</strong> <span class="price">$19.99</span></p>
+            </div>
+        </div>
+        
+        <div class="payment">
+            <h3>Payment Information</h3>
+            <p><strong>Subtotal:</strong> $169.98</p>
+            <p><strong>Tax:</strong> $13.60</p>
+            <p><strong>Shipping:</strong> $5.99</p>
+            <p class="total"><strong>Total:</strong> $189.57</p>
+        </div>
+        
+        <div class="shipping">
+            <h3>Shipping Information</h3>
+            <p><strong>Estimated Delivery:</strong> August 25, 2025</p>
+            <p><strong>Tracking Number:</strong> 1Z999AA1234567890</p>
+            <p><strong>Shipping Address:</strong><br>
+            John Doe<br>
+            123 Main Street<br>
+            Anytown, ST 12345</p>
+        </div>
+    </div>
+    
+    <p><em>This is a test page for AutoComplaint extension logging.</em></p>
+    
+    <script>
+        // Add some debugging info
+        console.log('🧪 TEST PAGE - Order confirmation test page loaded');
+        console.log('🧪 TEST PAGE - This should be detected as an order page');
+        console.log('🧪 TEST PAGE - Watch for AutoComplaint extraction logs');
+        
+        // Add a button to manually trigger extraction
+        const button = document.createElement('button');
+        button.textContent = 'Test AutoComplaint Extraction';
+        button.style.cssText = 'padding: 10px 20px; margin: 20px 0; font-size: 16px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;';
+        button.onclick = () => {
+            console.log('🧪 TEST BUTTON - Manual extraction test triggered');
+            if (window.AutoComplaintUniversalExtractor) {
+                window.AutoComplaintUniversalExtractor.startUniversalExtraction();
+            } else {
+                console.log('🧪 TEST BUTTON - AutoComplaint not available on this page');
+            }
+        };
+        document.body.appendChild(button);
+    </script>
+</body>
+</html>

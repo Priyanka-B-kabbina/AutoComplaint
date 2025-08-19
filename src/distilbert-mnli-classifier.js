@@ -109,6 +109,9 @@ class DistilBERTMNLIClassifier {
       throw new Error('Invalid text input for DistilBERT classification');
     }
 
+    console.log('🔍 CLASSIFICATION DEBUG - Input text length:', text.length);
+    console.log('🔍 CLASSIFICATION DEBUG - First 200 chars:', text.slice(0, 200));
+
     // Check cache first
     const cacheKey = this.getCacheKey(text);
     if (this.cache.has(cacheKey)) {
@@ -129,20 +132,33 @@ class DistilBERTMNLIClassifier {
       
       // Count order-related keywords in text
       const textLower = text.toLowerCase();
-      const keywordMatches = orderKeywords.filter(keyword => 
+      const foundKeywords = orderKeywords.filter(keyword => 
         textLower.includes(keyword)
-      ).length;
+      );
+      const keywordMatches = foundKeywords.length;
+      
+      console.log('🔍 CLASSIFICATION DEBUG - Found keywords:', foundKeywords);
+      console.log('🔍 CLASSIFICATION DEBUG - Keyword matches:', keywordMatches);
       
       // Analyze sentiment of the text
       const sentimentResult = await this.classifier(text);
+      console.log('🔍 CLASSIFICATION DEBUG - Sentiment result:', sentimentResult);
       
       // Combine keyword analysis with sentiment for order detection
       const keywordConfidence = Math.min(keywordMatches / 5, 1.0); // Normalize to 0-1
       const sentimentConfidence = sentimentResult[0].score;
       
+      console.log('🔍 CLASSIFICATION DEBUG - Keyword confidence:', keywordConfidence.toFixed(3));
+      console.log('🔍 CLASSIFICATION DEBUG - Sentiment confidence:', sentimentConfidence.toFixed(3));
+      
       // Order pages typically have positive sentiment and order keywords
       const combinedConfidence = (keywordConfidence * 0.7) + (sentimentConfidence * 0.3);
       const isOrder = keywordMatches >= 2 && combinedConfidence > 0.6;
+
+      console.log('🔍 CLASSIFICATION DEBUG - Combined confidence:', combinedConfidence.toFixed(3));
+      console.log('🔍 CLASSIFICATION DEBUG - Is order page?', isOrder);
+      console.log('🔍 CLASSIFICATION DEBUG - Decision logic: keywordMatches >= 2 && combinedConfidence > 0.6');
+      console.log('🔍 CLASSIFICATION DEBUG - Actual: keywordMatches =', keywordMatches, ', combinedConfidence =', combinedConfidence.toFixed(3));
 
       const classificationResult = {
         isOrder,
@@ -258,6 +274,10 @@ class DistilBERTMNLIClassifier {
    * Extract relevant content from the page for classification
    */
   extractPageContent() {
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Starting page content extraction');
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Current URL:', window.location.href);
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Page title:', document.title);
+    
     const selectors = [
       'main',
       '[role="main"]',
@@ -274,22 +294,41 @@ class DistilBERTMNLIClassifier {
     ];
 
     let content = '';
+    let foundElements = 0;
+    
     for (const selector of selectors) {
       const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
-        if (el.textContent) {
-          content += el.textContent.trim() + ' ';
+      console.log(`🔍 CONTENT EXTRACTION DEBUG - Selector "${selector}" found ${elements.length} elements`);
+      
+      elements.forEach((el, index) => {
+        if (el.textContent && el.textContent.trim()) {
+          const elementText = el.textContent.trim();
+          content += elementText + ' ';
+          foundElements++;
+          
+          if (index < 3) { // Log first 3 elements per selector
+            console.log(`🔍 CONTENT EXTRACTION DEBUG - Element ${index} text (first 100 chars):`, elementText.slice(0, 100));
+          }
         }
       });
     }
 
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Total elements found:', foundElements);
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Extracted content length:', content.length);
+
     // If no specific selectors found, use body text
     if (content.length < 50) {
+      console.log('🔍 CONTENT EXTRACTION DEBUG - Content too short, falling back to body text');
       content = document.body.textContent || document.body.innerText || '';
+      console.log('🔍 CONTENT EXTRACTION DEBUG - Body text length:', content.length);
     }
 
     // Limit content length to avoid overwhelming the classifier
-    return content.slice(0, 2000);
+    const finalContent = content.slice(0, 2000);
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Final content length (after truncation):', finalContent.length);
+    console.log('🔍 CONTENT EXTRACTION DEBUG - Final content preview (first 300 chars):', finalContent.slice(0, 300));
+    
+    return finalContent;
   }
 
   /**
