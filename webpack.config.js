@@ -37,7 +37,13 @@ module.exports = {
     fallback: {
       "fs": false,
       "path": false,
-      "crypto": false
+      "crypto": false,
+      "stream": false,
+      "buffer": false,
+      "util": false
+    },
+    alias: {
+      '@xenova/transformers': '@xenova/transformers/dist/transformers.min.js'
     }
   },
   optimization: {

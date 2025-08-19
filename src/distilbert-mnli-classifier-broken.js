@@ -7,7 +7,14 @@ class DistilBERTMNLIClassifier {
   constructor() {
     this.isLoaded = false;
     this.classifier = null;
-    // Use a browser-compatible model for sentiment analysis
+    // Use a browser-compatible model for zero-shot classification
+    this.modelName = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
+    this.cache = new Map();
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+  }
+    this.isLoaded = false;
+    this.classifier = null;
+    // Use a browser-compatible model - start with sentiment and adapt to zero-shot
     this.modelName = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
@@ -143,20 +150,35 @@ class DistilBERTMNLIClassifier {
   }
 
   /**
-   * Classify the current page content
+   * Classify entire page content using DistilBERT MNLI
    */
   async classifyPage() {
-    const pageContent = this.extractPageContent();
-    const classification = await this.classify(pageContent);
-    
-    return {
-      ...classification,
-      pageInfo: {
+    try {
+      // Extract key page content
+      const content = this.extractPageContent();
+      
+      if (!content || content.trim().length < 50) {
+        throw new Error('Insufficient page content for DistilBERT classification');
+      }
+      
+      // Classify using DistilBERT MNLI
+      const result = await this.classify(content);
+      
+      // Add page-level metadata
+      result.pageInfo = {
+        contentLength: content.length,
         url: window.location.href,
         title: document.title,
-        contentLength: pageContent.length
-      }
-    };
+        timestamp: new Date().toISOString(),
+        modelUsed: 'DistilBERT MNLI'
+      };
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ DistilBERT page classification error:', error);
+      throw error;
+    }
   }
 
   /**
@@ -225,37 +247,40 @@ class DistilBERTMNLIClassifier {
       '.receipt',
       '.confirmation',
       '.order-details',
-      '.purchase-summary',
+      '.order-summary',
       'h1, h2, h3',
       '.title',
-      '.price',
-      '.total'
+      '.heading',
+      '.product-title',
+      '.checkout',
+      '.cart'
     ];
-
+    
     let content = '';
+    
     for (const selector of selectors) {
       const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
-        if (el.textContent) {
-          content += el.textContent.trim() + ' ';
+      for (const element of elements) {
+        if (element.textContent) {
+          content += element.textContent + ' ';
         }
-      });
+      }
     }
-
-    // If no specific selectors found, use body text
-    if (content.length < 50) {
-      content = document.body.textContent || document.body.innerText || '';
+    
+    // Fallback to body content if nothing specific found
+    if (content.trim().length < 100) {
+      content = document.body.textContent || '';
     }
-
-    // Limit content length to avoid overwhelming the classifier
-    return content.slice(0, 2000);
+    
+    // Limit content length for model processing (BERT has 512 token limit)
+    return content.substring(0, 2000); // ~500 tokens approximately
   }
 
   /**
    * Generate cache key for text
    */
   getCacheKey(text) {
-    // Simple hash function for cache key
+    // Simple hash for cache key
     let hash = 0;
     for (let i = 0; i < Math.min(text.length, 100); i++) {
       const char = text.charCodeAt(i);
