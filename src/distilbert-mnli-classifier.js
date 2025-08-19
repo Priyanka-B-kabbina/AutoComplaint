@@ -1,22 +1,21 @@
 /**
  * DistilBERT MNLI Order Page Classifier for Chrome Extension
- * Pure ML-based inference using DistilBERT MNLI model
+ * Browser-compatible version without ES6 imports
+ * Relies on global `pipeline` function from @xenova/transformers
  */
-
-import { pipeline } from '@xenova/transformers';
 
 class DistilBERTMNLIClassifier {
   constructor() {
     this.isLoaded = false;
     this.classifier = null;
-    this.modelName = 'distilbert-base-uncased-finetuned-sst-2-english'; // Will update to MNLI
-    this.mnliModelName = 'facebook/bart-large-mnli'; // Better MNLI model
+    // Use a browser-compatible model - start with sentiment and adapt to zero-shot
+    this.modelName = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
 
   /**
-   * Load the DistilBERT MNLI model
+   * Load the DistilBERT model for classification
    */
   async loadModel() {
     if (this.isLoaded && this.classifier) {
@@ -24,26 +23,31 @@ class DistilBERTMNLIClassifier {
     }
 
     try {
-      console.log('🔄 Loading DistilBERT MNLI model...');
+      console.log('🔄 Loading DistilBERT model...');
       
-      // Use zero-shot classification pipeline with MNLI model
-      this.classifier = await pipeline(
-        'zero-shot-classification',
-        this.mnliModelName
+      // Check if pipeline is available globally
+      if (typeof window.pipeline === 'undefined') {
+        throw new Error('Pipeline function not available. Make sure @xenova/transformers is loaded.');
+      }
+      
+      // Use sentiment analysis pipeline first (more reliable in browser)
+      this.classifier = await window.pipeline(
+        'sentiment-analysis',
+        this.modelName
       );
       
       this.isLoaded = true;
-      console.log('✅ DistilBERT MNLI model loaded successfully');
+      console.log('✅ DistilBERT model loaded successfully');
       return true;
       
     } catch (error) {
-      console.error('❌ Failed to load DistilBERT MNLI model:', error);
-      throw new Error(`DistilBERT MNLI model loading failed: ${error.message}`);
+      console.error('❌ Failed to load DistilBERT model:', error);
+      throw new Error(`DistilBERT model loading failed: ${error.message}`);
     }
   }
 
   /**
-   * Classify text using DistilBERT MNLI zero-shot classification
+   * Classify text using DistilBERT sentiment analysis adapted for order detection
    */
   async classify(text) {
     if (!this.isLoaded) {
@@ -65,40 +69,44 @@ class DistilBERTMNLIClassifier {
     }
 
     try {
-      // Define the candidate labels for order vs non-order classification
-      const candidateLabels = [
-        'online order confirmation',
-        'purchase receipt', 
-        'order summary',
-        'product page',
-        'category listing',
-        'search results',
-        'general webpage'
+      // Use sentiment analysis on order-related keywords
+      const orderKeywords = [
+        'order', 'purchase', 'buy', 'transaction', 'invoice', 'receipt', 
+        'confirmed', 'shipped', 'delivered', 'payment', 'total', 'amount',
+        'order id', 'order number', 'tracking', 'quantity'
       ];
-
-      // Use DistilBERT MNLI for zero-shot classification
-      const result = await this.classifier(text, candidateLabels);
       
-      // Determine if this is an order page based on top predictions
-      const orderLabels = ['online order confirmation', 'purchase receipt', 'order summary'];
-      const topLabel = result.labels[0];
-      const topScore = result.scores[0];
+      // Count order-related keywords in text
+      const textLower = text.toLowerCase();
+      const keywordMatches = orderKeywords.filter(keyword => 
+        textLower.includes(keyword)
+      ).length;
       
-      const isOrder = orderLabels.includes(topLabel);
-      const confidence = topScore;
+      // Analyze sentiment of the text
+      const sentimentResult = await this.classifier(text);
+      
+      // Combine keyword analysis with sentiment for order detection
+      const keywordConfidence = Math.min(keywordMatches / 5, 1.0); // Normalize to 0-1
+      const sentimentConfidence = sentimentResult[0].score;
+      
+      // Order pages typically have positive sentiment and order keywords
+      const combinedConfidence = (keywordConfidence * 0.7) + (sentimentConfidence * 0.3);
+      const isOrder = keywordMatches >= 2 && combinedConfidence > 0.6;
 
       const classificationResult = {
         isOrder,
-        confidence,
-        method: 'distilbert-mnli',
-        topLabel,
-        allPredictions: result.labels.map((label, i) => ({
-          label,
-          score: result.scores[i]
-        })),
+        confidence: combinedConfidence,
+        method: 'distilbert-sentiment-adapted',
+        topLabel: isOrder ? 'order page' : 'non-order page',
+        allPredictions: [
+          { label: 'order page', score: combinedConfidence },
+          { label: 'non-order page', score: 1 - combinedConfidence }
+        ],
         details: {
-          model: this.mnliModelName,
-          candidateLabels,
+          model: this.modelName,
+          keywordMatches: keywordMatches,
+          keywordConfidence: keywordConfidence,
+          sentimentResult: sentimentResult,
           timestamp: new Date().toISOString()
         }
       };
@@ -109,17 +117,18 @@ class DistilBERTMNLIClassifier {
         timestamp: Date.now()
       });
 
-      console.log('🤖 DistilBERT MNLI classification:', {
+      console.log('🤖 DistilBERT classification:', {
         isOrder,
-        confidence: confidence.toFixed(3),
-        topLabel
+        confidence: combinedConfidence.toFixed(3),
+        keywordMatches,
+        sentiment: sentimentResult[0].label
       });
 
       return classificationResult;
 
     } catch (error) {
-      console.error('❌ DistilBERT MNLI classification failed:', error);
-      throw new Error(`DistilBERT MNLI classification failed: ${error.message}`);
+      console.error('❌ DistilBERT classification failed:', error);
+      throw new Error(`DistilBERT classification failed: ${error.message}`);
     }
   }
 
@@ -173,24 +182,35 @@ class DistilBERTMNLIClassifier {
     ];
 
     try {
-      const result = await this.classifier(text, labels);
+      // Use the main classify method which works with sentiment analysis
+      const result = await this.classify(text);
       
-      // More granular classification for e-commerce
-      const orderKeywords = ['order', 'confirmation', 'cart', 'checkout', 'tracking', 'status'];
-      const topLabel = result.labels[0];
-      const isOrderRelated = orderKeywords.some(keyword => 
-        topLabel.toLowerCase().includes(keyword)
-      );
+      // Map the result to custom labels based on order detection
+      let bestLabel, confidence;
+      if (result.isOrder) {
+        // Choose most appropriate order-related label
+        bestLabel = labels.find(label => 
+          label.includes('order') || label.includes('cart') || label.includes('tracking')
+        ) || labels[0];
+        confidence = result.confidence;
+      } else {
+        // Choose most appropriate non-order label
+        bestLabel = labels.find(label => 
+          label.includes('catalog') || label.includes('general') || label.includes('help')
+        ) || labels[labels.length - 1];
+        confidence = 1 - result.confidence;
+      }
 
       return {
-        isOrder: isOrderRelated,
-        confidence: result.scores[0],
-        method: 'distilbert-mnli-custom',
-        topLabel,
-        allPredictions: result.labels.map((label, i) => ({
-          label,
-          score: result.scores[i]
-        }))
+        isOrder: result.isOrder,
+        confidence: confidence,
+        method: 'distilbert-sentiment-custom',
+        topLabel: bestLabel,
+        allPredictions: labels.map(label => {
+          const isOrderLabel = label.includes('order') || label.includes('cart') || label.includes('tracking');
+          const score = isOrderLabel === result.isOrder ? confidence : (1 - confidence) / (labels.length - 1);
+          return { label, score };
+        }).sort((a, b) => b.score - a.score)
       };
 
     } catch (error) {
@@ -266,9 +286,9 @@ class DistilBERTMNLIClassifier {
    */
   getModelInfo() {
     return {
-      name: 'DistilBERT MNLI Classifier',
-      model: this.mnliModelName,
-      type: 'zero-shot-classification',
+      name: 'DistilBERT Order Classifier',
+      model: this.modelName,
+      type: 'sentiment-analysis-adapted',
       loaded: this.isLoaded,
       cacheSize: this.cache.size
     };

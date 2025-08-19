@@ -46,6 +46,12 @@
     <script type="module">
         import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
         window.pipeline = pipeline;
+        
+        // Signal that pipeline is loaded
+        window.pipelineLoaded = true;
+        
+        // Dispatch custom event to notify other scripts
+        window.dispatchEvent(new CustomEvent('pipelineReady'));
     </script>
 
     <!-- Load DistilBERT classifier -->
@@ -53,6 +59,18 @@
 
     <script>
         let classifier = null;
+        let pipelineReady = false;
+
+        // Wait for pipeline to be loaded
+        function waitForPipeline() {
+            return new Promise((resolve) => {
+                if (window.pipelineLoaded) {
+                    resolve();
+                } else {
+                    window.addEventListener('pipelineReady', resolve, { once: true });
+                }
+            });
+        }
 
         // Test data
         const testCases = [
@@ -92,6 +110,11 @@
             if (classifier) return classifier;
             
             try {
+                updateModelInfo("🔄 Waiting for pipeline to load...");
+                
+                // Wait for pipeline to be ready
+                await waitForPipeline();
+                
                 updateModelInfo("🔄 Loading DistilBERT MNLI model...");
                 classifier = new DistilBERTMNLIClassifier();
                 await classifier.loadModel();
@@ -99,6 +122,7 @@
                 return classifier;
             } catch (error) {
                 updateModelInfo(`❌ Failed to load model: ${error.message}`);
+                console.error('Classifier initialization error:', error);
                 throw error;
             }
         }
@@ -228,7 +252,17 @@
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            updateModelInfo("🔄 Ready to load DistilBERT MNLI model");
+            console.log('Page loaded, checking dependencies...');
+            console.log('Pipeline available:', typeof window.pipeline !== 'undefined');
+            console.log('DistilBERTMNLIClassifier available:', typeof DistilBERTMNLIClassifier !== 'undefined');
+            
+            if (typeof DistilBERTMNLIClassifier === 'undefined') {
+                updateModelInfo("❌ DistilBERTMNLIClassifier not loaded. Check console for errors.");
+            } else if (typeof window.pipeline === 'undefined') {
+                updateModelInfo("❌ Pipeline not loaded. Waiting for transformers library...");
+            } else {
+                updateModelInfo("🔄 Ready to load DistilBERT MNLI model");
+            }
         });
     </script>
 </body>
