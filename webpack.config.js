@@ -41,9 +41,6 @@ module.exports = {
       "stream": false,
       "buffer": false,
       "util": false
-    },
-    alias: {
-      '@xenova/transformers': '@xenova/transformers/dist/transformers.min.js'
     }
   },
   optimization: {

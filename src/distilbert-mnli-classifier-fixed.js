@@ -24,77 +24,36 @@ class DistilBERTMNLIClassifier {
     try {
       console.log('🔄 Loading DistilBERT model...');
       
-      // Use a fallback approach for Chrome extensions
-      // Create a simplified but effective classifier
-      this.classifier = await this.createSentimentClassifier();
+      // Import the pipeline function from transformers
+      let pipeline;
+      if (typeof window !== 'undefined' && window.pipeline) {
+        // Use global pipeline if available
+        pipeline = window.pipeline;
+      } else {
+        // Import from transformers module
+        const { pipeline: pipelineFunc } = await import('@xenova/transformers');
+        pipeline = pipelineFunc;
+        
+        // Also set it globally for future use
+        if (typeof window !== 'undefined') {
+          window.pipeline = pipeline;
+        }
+      }
+      
+      // Use sentiment analysis pipeline (more reliable in browser)
+      this.classifier = await pipeline(
+        'sentiment-analysis',
+        this.modelName
+      );
       
       this.isLoaded = true;
-      console.log('✅ DistilBERT-inspired model loaded successfully');
+      console.log('✅ DistilBERT model loaded successfully');
       return true;
       
     } catch (error) {
       console.error('❌ Failed to load DistilBERT model:', error);
       throw new Error(`DistilBERT model loading failed: ${error.message}`);
     }
-  }
-
-  /**
-   * Create a sentiment-based classifier that works reliably in Chrome extensions
-   */
-  async createSentimentClassifier() {
-    return (text) => {
-      // Advanced keyword and pattern analysis
-      const orderKeywords = [
-        'order', 'purchase', 'buy', 'transaction', 'invoice', 'receipt',
-        'confirmed', 'shipped', 'delivered', 'payment', 'total', 'amount',
-        'order id', 'order number', 'tracking', 'quantity', 'price',
-        'confirmation', 'thank you', 'estimated delivery'
-      ];
-
-      const orderPatterns = [
-        /order\s*#?\s*[a-z0-9\-]+/i,
-        /\$[\d,]+\.?\d*/,
-        /total:?\s*\$?[\d,]+\.?\d*/i,
-        /delivered?\s+on/i,
-        /shipped?\s+on/i,
-        /tracking\s+(number|#)/i
-      ];
-
-      const positiveWords = [
-        'confirmed', 'success', 'complete', 'delivered', 'shipped', 
-        'thank', 'congratulations', 'approved', 'processed'
-      ];
-
-      const textLower = text.toLowerCase();
-      
-      // Count keyword matches
-      const keywordMatches = orderKeywords.filter(keyword => 
-        textLower.includes(keyword)
-      ).length;
-
-      // Count pattern matches
-      const patternMatches = orderPatterns.filter(pattern =>
-        pattern.test(text)
-      ).length;
-
-      // Count positive sentiment words
-      const positiveMatches = positiveWords.filter(word =>
-        textLower.includes(word)
-      ).length;
-
-      // Calculate composite score
-      const keywordScore = Math.min(keywordMatches / 8, 1.0);
-      const patternScore = Math.min(patternMatches / 3, 1.0);
-      const sentimentScore = Math.min(positiveMatches / 4, 1.0);
-      
-      const compositeScore = (keywordScore * 0.5) + (patternScore * 0.3) + (sentimentScore * 0.2);
-      const isPositive = compositeScore > 0.4;
-      
-      return [{
-        label: isPositive ? 'POSITIVE' : 'NEGATIVE',
-        score: isPositive ? 0.6 + (compositeScore * 0.4) : 0.4 - (compositeScore * 0.4)
-      }];
-    };
   }
 
   /**
@@ -319,9 +278,9 @@ class DistilBERTMNLIClassifier {
    */
   getModelInfo() {
     return {
-      name: 'DistilBERT-Inspired Order Classifier',
-      model: 'advanced-pattern-sentiment-classifier',
-      type: 'keyword-pattern-sentiment-analysis',
+      name: 'DistilBERT Order Classifier',
+      model: this.modelName,
+      type: 'sentiment-analysis-transformers',
       loaded: this.isLoaded,
       cacheSize: this.cache.size
     };
