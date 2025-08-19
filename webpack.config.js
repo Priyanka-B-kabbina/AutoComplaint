@@ -3,7 +3,8 @@ const path = require('path');
 module.exports = {
   entry: {
     universal_extractor: './content_scripts/universal_extractor.js',
-    consumer_portal: './content_scripts/consumer_portal.js'
+    consumer_portal: './content_scripts/consumer_portal.js',
+    distilbert_classifier: './src/distilbert-mnli-classifier.js'
   },
   output: {
     filename: '[name].bundle.js',

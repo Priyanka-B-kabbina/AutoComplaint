@@ -28,7 +28,10 @@
     "content_scripts": [
       {
         "matches": ["<all_urls>"],
-        "js": ["dist/universal_extractor.bundle.js"],
+        "js": [
+          "dist/distilbert_classifier.bundle.js",
+          "dist/universal_extractor.bundle.js"
+        ],
         "run_at": "document_idle"
       },
       {

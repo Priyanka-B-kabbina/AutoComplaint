@@ -27,6 +27,11 @@ class DistilBERTMNLIClassifier {
       
       // Check if pipeline is available globally
       if (typeof window.pipeline === 'undefined') {
+        // Try to load transformers library dynamically
+        await this.loadTransformersLibrary();
+      }
+      
+      if (typeof window.pipeline === 'undefined') {
         throw new Error('Pipeline function not available. Make sure @xenova/transformers is loaded.');
       }
       
@@ -44,6 +49,46 @@ class DistilBERTMNLIClassifier {
       console.error('❌ Failed to load DistilBERT model:', error);
       throw new Error(`DistilBERT model loading failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Dynamically load the transformers library
+   */
+  async loadTransformersLibrary() {
+    if (typeof window.pipeline !== 'undefined') {
+      return; // Already loaded
+    }
+
+    console.log('📦 Loading @xenova/transformers library...');
+    
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.textContent = `
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+        window.pipeline = pipeline;
+        window.transformersLoaded = true;
+      `;
+      
+      script.onload = () => {
+        // Wait a bit for the module to load
+        const checkLoaded = () => {
+          if (window.transformersLoaded) {
+            console.log('✅ Transformers library loaded successfully');
+            resolve();
+          } else {
+            setTimeout(checkLoaded, 100);
+          }
+        };
+        checkLoaded();
+      };
+      
+      script.onerror = () => {
+        reject(new Error('Failed to load transformers library'));
+      };
+      
+      document.head.appendChild(script);
+    });
   }
 
   /**
@@ -304,3 +349,7 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.DistilBERTMNLIClassifier = DistilBERTMNLIClassifier;
 }
+
+// ES6 export for webpack
+export default DistilBERTMNLIClassifier;
+export { DistilBERTMNLIClassifier };

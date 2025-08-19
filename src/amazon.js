@@ -6,20 +6,16 @@
 console.log('AutoComplaint: DistilBERT MNLI + ML Extraction v7.1');
 
 // Import DistilBERT MNLI Classifier
-// Note: In browser environment, this will be loaded via script tag
-let DistilBERTMNLIClassifier;
-if (typeof window !== 'undefined') {
-  // Browser environment - class available globally
-  DistilBERTMNLIClassifier = window.DistilBERTMNLIClassifier;
-} else {
-  // Node.js environment - import module
-  try {
-    const module = await import('./distilbert-mnli-classifier.js');
-    DistilBERTMNLIClassifier = module.default || module.DistilBERTMNLIClassifier;
-  } catch (error) {
-    console.error('Failed to import DistilBERT classifier:', error);
-  }
+import DistilBERTMNLIClassifier from './distilbert-mnli-classifier.js';
+
+// Also try global window fallback for browser environments
+let ClassifierFallback = DistilBERTMNLIClassifier;
+if (!ClassifierFallback && typeof window !== 'undefined') {
+  ClassifierFallback = window.DistilBERTMNLIClassifier;
 }
+
+// Use the available classifier
+const ClassifierClass = ClassifierFallback || DistilBERTMNLIClassifier;
 
 // Global configuration
 const CONFIG = {
@@ -52,12 +48,11 @@ async function initializeMLModels() {
     
     // 1. DistilBERT MNLI Order Page Classifier (PRIMARY)
     console.log('🧠 Loading DistilBERT MNLI classifier...');
-    try {
-      if (!DistilBERTMNLIClassifier) {
+    try {      if (!ClassifierClass) {
         throw new Error('DistilBERT MNLI Classifier not available');
       }
-      
-      models.distilbertClassifier = new DistilBERTMNLIClassifier();
+
+      models.distilbertClassifier = new ClassifierClass();
       await models.distilbertClassifier.loadModel();
       console.log('✅ DistilBERT MNLI classifier loaded successfully');
     } catch (error) {
