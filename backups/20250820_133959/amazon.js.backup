@@ -183,153 +183,54 @@ async function isOrderPage() {
  * Extract text content from page for ML processing
  */
 function extractPageText() {
-  console.log('📄 TEXT EXTRACTION - Starting enhanced page text extraction');
+  console.log('📄 TEXT EXTRACTION - Starting page text extraction');
   
-  // Elements to exclude (navigation, ads, etc.)
-  const excludeSelectors = [
-    'nav', 'header', 'footer', 'aside', 
-    '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
-    '.navigation', '.nav', '.menu', '.header', '.footer', '.sidebar',
-    '.advertisement', '.ad', '.ads', '.promo', '.promotion',
-    '.breadcrumb', '.breadcrumbs', '.tabs', '.tab',
-    'script', 'style', 'noscript'
-  ];
-  
-  // Priority selectors for order content
-  const prioritySelectors = [
-    '[class*="order-detail"]', '[id*="order-detail"]',
-    '[class*="order-summary"]', '[id*="order-summary"]', 
-    '[class*="order-info"]', '[id*="order-info"]',
-    '[class*="invoice"]', '[id*="invoice"]',
-    '[class*="receipt"]', '[id*="receipt"]',
-    '[class*="confirmation"]', '[id*="confirmation"]'
-  ];
-  
-  // General content selectors
-  const contentSelectors = [
-    'main', '[role="main"]', '.main-content', '#main-content',
-    '.order', '.purchase', '.transaction'
+  // Focus on main content areas
+  const selectors = [
+    'main',
+    '[role="main"]',
+    '.order',
+    '.invoice', 
+    '.receipt',
+    '.confirmation',
+    '.order-details',
+    '.order-summary'
   ];
   
   let content = '';
-  let foundMeaningfulContent = false;
+  const elementsFound = {};
   
-  // First, try priority selectors (most likely to contain order info)
-  console.log('📄 TEXT EXTRACTION - Checking priority selectors...');
-  for (const selector of prioritySelectors) {
+  for (const selector of selectors) {
     const elements = document.querySelectorAll(selector);
-    if (elements.length > 0) {
-      console.log(`📄 TEXT EXTRACTION - Found ${elements.length} priority elements for: ${selector}`);
-      
-      for (const element of elements) {
-        const cleanText = cleanElementText(element, excludeSelectors);
-        if (cleanText.length > 20) {
-          content += cleanText + ' ';
-          foundMeaningfulContent = true;
-          console.log(`📄 TEXT EXTRACTION - Priority content: ${cleanText.slice(0, 150)}...`);
-        }
-      }
-    }
-  }
-  
-  // If no priority content found, try general content selectors
-  if (!foundMeaningfulContent) {
-    console.log('📄 TEXT EXTRACTION - No priority content found, trying general selectors...');
+    elementsFound[selector] = elements.length;
     
-    for (const selector of contentSelectors) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        console.log(`📄 TEXT EXTRACTION - Found ${elements.length} general elements for: ${selector}`);
-        
-        for (const element of elements) {
-          const cleanText = cleanElementText(element, excludeSelectors);
-          if (cleanText.length > 50) {
-            content += cleanText + ' ';
-            foundMeaningfulContent = true;
-            console.log(`📄 TEXT EXTRACTION - General content: ${cleanText.slice(0, 150)}...`);
-            break; // Only take first meaningful general content to avoid duplication
-          }
+    for (const element of elements) {
+      if (element.textContent) {
+        const elementText = element.textContent.trim();
+        if (elementText.length > 10) { // Only include meaningful text
+          content += elementText + ' ';
+          console.log(`📄 TEXT EXTRACTION - Found content in ${selector}: ${elementText.slice(0, 100)}...`);
         }
-        
-        if (foundMeaningfulContent) break;
       }
     }
   }
   
-  // Final cleanup and processing
-  content = content.trim();
-  console.log('📄 TEXT EXTRACTION - Raw extracted content length:', content.length);
+  console.log('📄 TEXT EXTRACTION - Elements found per selector:', elementsFound);
+  console.log('📄 TEXT EXTRACTION - Content from selectors length:', content.length);
   
-  // Advanced text cleaning
-  content = cleanAndNormalizeText(content);
-  console.log('📄 TEXT EXTRACTION - Cleaned content length:', content.length);
+  // Fallback to body if nothing specific found
+  if (content.trim().length < 100) {
+    console.log('📄 TEXT EXTRACTION - Content too short, falling back to body text');
+    content = document.body.textContent || '';
+    console.log('📄 TEXT EXTRACTION - Body text length:', content.length);
+  }
   
   // Limit content length for ML processing
   const finalContent = content.substring(0, 5000);
-  console.log('📄 TEXT EXTRACTION - Final content length (after truncation):', finalContent.length);
-  console.log('📄 TEXT EXTRACTION - Final content preview (first 200 chars):', finalContent.slice(0, 200));
-  console.log('📄 TEXT EXTRACTION - Content quality check - has meaningful words:', 
-    /\b(order|purchase|total|amount|price|date|customer|product|item|quantity|invoice|receipt)\b/i.test(finalContent));
+  console.log('📄 TEXT EXTRACTION - Final content length (truncated):', finalContent.length);
+  console.log('📄 TEXT EXTRACTION - Final content preview:', finalContent.slice(0, 300));
   
   return finalContent;
-}
-
-/**
- * Clean text from an element while excluding unwanted subelements
- */
-function cleanElementText(element, excludeSelectors) {
-  // Clone the element to avoid modifying the original DOM
-  const clonedElement = element.cloneNode(true);
-  
-  // Remove excluded elements
-  for (const excludeSelector of excludeSelectors) {
-    const excludedElements = clonedElement.querySelectorAll(excludeSelector);
-    excludedElements.forEach(el => el.remove());
-  }
-  
-  // Get text content and clean it
-  let text = clonedElement.textContent || '';
-  
-  // Remove excessive whitespace and normalize
-  text = text.replace(/\s+/g, ' ').trim();
-  
-  return text;
-}
-
-/**
- * Advanced text cleaning and normalization
- */
-function cleanAndNormalizeText(text) {
-  console.log('📄 TEXT CLEANING - Starting advanced text cleanup...');
-  
-  // Remove excessive whitespace, tabs, newlines
-  text = text.replace(/[\t\n\r\f\v]+/g, ' ');
-  text = text.replace(/\s{2,}/g, ' ');
-  
-  // Remove empty parentheses, brackets
-  text = text.replace(/\(\s*\)/g, '');
-  text = text.replace(/\[\s*\]/g, '');
-  text = text.replace(/\{\s*\}/g, '');
-  
-  // Remove repeated punctuation
-  text = text.replace(/[.,;:!?]{2,}/g, '.');
-  
-  // Remove standalone single characters (except numbers and currency)
-  text = text.replace(/\b[a-zA-Z]\b/g, '');
-  
-  // Remove excessive dots and dashes
-  text = text.replace(/\.{2,}/g, '.');
-  text = text.replace(/-{2,}/g, '-');
-  
-  // Clean up spaces around punctuation
-  text = text.replace(/\s+([.,;:!?])/g, '$1');
-  text = text.replace(/([.,;:!?])\s*([.,;:!?])/g, '$1');
-  
-  // Final cleanup
-  text = text.replace(/\s+/g, ' ').trim();
-  
-  console.log('📄 TEXT CLEANING - Text cleanup completed');
-  return text;
 }
 
 /**
