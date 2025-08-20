@@ -105,8 +105,40 @@ class DistilBERTMNLIClassifier {
       await this.loadModel();
     }
 
-    if (!text || typeof text !== 'string') {
-      throw new Error('Invalid text input for DistilBERT classification');
+    // Enhanced input validation with better error handling
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      console.warn('⚠️ CLASSIFICATION WARNING - Invalid or empty text input:', { 
+        text: text, 
+        type: typeof text, 
+        length: text?.length || 0 
+      });
+      
+      // Return a default "not order page" result instead of throwing error
+      return {
+        isOrder: false,
+        confidence: 0,
+        method: 'distilbert-sentiment-adapted',
+        topLabel: 'non-order page',
+        allPredictions: [
+          { label: 'non-order page', score: 1.0 },
+          { label: 'order page', score: 0.0 }
+        ],
+        details: {
+          model: this.modelName,
+          keywordMatches: 0,
+          keywordConfidence: 0,
+          sentimentResult: [{ label: 'NEGATIVE', score: 1.0 }],
+          timestamp: new Date().toISOString(),
+          error: 'Invalid or empty text input'
+        }
+      };
+    }
+
+    // Clean and validate text
+    text = text.trim();
+    if (text.length < 10) {
+      console.warn('⚠️ CLASSIFICATION WARNING - Text too short for reliable classification:', text.length);
+      // Still process but with low confidence
     }
 
     console.log('🔍 CLASSIFICATION DEBUG - Input text length:', text.length);
@@ -379,6 +411,33 @@ class DistilBERTMNLIClassifier {
       content = bodyElement.textContent || bodyElement.innerText || '';
       content = this.cleanAndNormalizeText(content);
       console.log('🔍 CONTENT EXTRACTION DEBUG - Filtered body text length:', content.length);
+    }
+
+    // Final fallback: if still no content, try basic selectors
+    if (content.length < 50) {
+      console.log('🔍 CONTENT EXTRACTION DEBUG - Still no content, trying basic fallback selectors...');
+      const fallbackSelectors = ['body', 'html', '[id]', '[class]'];
+      
+      for (const selector of fallbackSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          const fallbackText = elements[0].textContent || elements[0].innerText || '';
+          if (fallbackText.length > content.length) {
+            content = this.cleanAndNormalizeText(fallbackText);
+            console.log(`🔍 CONTENT EXTRACTION DEBUG - Fallback content from ${selector}: ${content.length} chars`);
+            break;
+          }
+        }
+      }
+    }
+
+    // Ultimate fallback: provide minimal content to avoid errors
+    if (!content || content.length < 10) {
+      console.warn('⚠️ CONTENT EXTRACTION WARNING - No meaningful content found, using page title and URL');
+      content = `${document.title} ${window.location.href}`.trim();
+      if (!content || content.length < 5) {
+        content = 'webpage content not available';
+      }
     }
 
     // Limit content length to avoid overwhelming the classifier
