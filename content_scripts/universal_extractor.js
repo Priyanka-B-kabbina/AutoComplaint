@@ -4,7 +4,7 @@
  */
 
 // Import the main ML extraction logic
-import { initializeExtraction } from '../src/amazon.js';
+import { initializeExtraction } from '../src/universal-extractor.js';
 
 console.log('🚀 AutoComplaint Universal Extractor v7.0 - ML-Based');
 
